@@ -4,7 +4,7 @@ from nvidia.dali import pipeline_def
 import nvidia.dali.fn as fn
 import nvidia.dali.types as types
 
-image_dir = "/home/lbraach/datasets/phoenix2014-release/phoenix-2014-multisigner/features/fullFrame-210x260px/train/01April_2010_Thursday_heute_default-6/"
+image_dir = "/home/lbraach/data/phoenix2014-release/phoenix-2014-multisigner/features/fullFrame-210x260px/train/01April_2010_Thursday_heute_default-6/"
 max_batch_size = 1
 
 
