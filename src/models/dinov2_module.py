@@ -5,7 +5,7 @@ from transformers.modeling_outputs import SemanticSegmenterOutput
 
 class LinearClassifier(torch.nn.Module):
     def __init__(self, in_channels, tokenW=32, tokenH=32, num_labels=1):
-        super(LinearClassifier, self).__init__()
+        super().__init__()
 
         self.in_channels = in_channels
         self.width = tokenW
@@ -26,18 +26,23 @@ class Dinov2ForSemanticSegmentation(Dinov2PreTrainedModel):
         self.dinov2 = Dinov2Model(config)
         self.classifier = LinearClassifier(config.hidden_size, 32, 32, config.num_labels)
 
-    def forward(self, pixel_values, output_hidden_states=False, output_attentions=False, labels=None):
+    def forward(
+        self, pixel_values, output_hidden_states=False, output_attentions=False, labels=None
+    ):
         # use frozen features
-        outputs = self.dinov2(pixel_values,
-                              output_hidden_states=output_hidden_states,
-                              output_attentions=output_attentions)
+        outputs = self.dinov2(
+            pixel_values,
+            output_hidden_states=output_hidden_states,
+            output_attentions=output_attentions,
+        )
         # get the patch embeddings - so we exclude the CLS token
         patch_embeddings = outputs.last_hidden_state[:, 1:, :]
 
         # convert to logits and upsample to the size of the pixel values
         logits = self.classifier(patch_embeddings)
-        logits = torch.nn.functional.interpolate(logits, size=pixel_values.shape[2:], mode="bilinear",
-                                                 align_corners=False)
+        logits = torch.nn.functional.interpolate(
+            logits, size=pixel_values.shape[2:], mode="bilinear", align_corners=False
+        )
 
         loss = None
         if labels is not None:
