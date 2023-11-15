@@ -4,11 +4,11 @@ from torch import nn
 from transformers import AutoImageProcessor, Dinov2Model
 
 
-class DINOv2(nn.Module):
+class SpatialEncoderDINOv2(nn.Module):
     """A simple fully-connected neural net for computing predictions."""
 
     def __init__(
-        self,
+            self,
     ) -> None:
         """Initialize a `DINOv2` module."""
         super().__init__()
@@ -16,19 +16,23 @@ class DINOv2(nn.Module):
         self.image_processor = AutoImageProcessor.from_pretrained("facebook/dinov2-base")
         self.model = Dinov2Model.from_pretrained("facebook/dinov2-base")
 
-    def forward(self, x: Image) -> torch.Tensor:
+    def forward(self, **kwargs) -> torch.Tensor:
         """Perform a single forward pass through the network.
 
         :param x: The input image.
         :return: A tensor of predictions.
         """
-        inputs = self.image_processor(x, return_tensors="pt")
 
         with torch.no_grad():
-            outputs = self.model(**inputs)
+            outputs = self.model(**kwargs)
 
         return outputs.last_hidden_state
 
+    def preprocess_image(self, x: Image) -> torch.Tensor:
+        inputs = self.image_processor(x, return_tensors="pt")
+
+        return inputs
+
 
 if __name__ == "__main__":
-    _ = DINOv2()
+    _ = SpatialEncoderDINOv2()
