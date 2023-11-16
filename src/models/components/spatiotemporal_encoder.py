@@ -2,9 +2,6 @@ import torch
 from PIL import Image
 from torch import nn
 
-from src.models.components.spatial_encoder_dinov2 import SpatialEncoderDINOv2
-from src.models.components.temporal_encoder import TemporalEncoder
-
 
 class SpatiotemporalEncoder(nn.Module):
 
