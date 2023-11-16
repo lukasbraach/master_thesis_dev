@@ -7,6 +7,7 @@ class TemporalEncoder(nn.Module):
     def __init__(self) -> None:
         super().__init__()
 
+        # TODO increase embedding size for decoder?
         encoder_layer = nn.TransformerEncoderLayer(d_model=768, nhead=8)
 
         # TODO add `norm = nn.BatchNorm1d`..?
