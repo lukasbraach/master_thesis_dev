@@ -8,7 +8,6 @@ class LanguageDecoder(nn.Module):
 
     def __init__(
             self,
-            input_size: int = 768,
     ) -> None:
         super().__init__()
 
