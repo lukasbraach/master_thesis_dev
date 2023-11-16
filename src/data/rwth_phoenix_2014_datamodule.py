@@ -11,6 +11,7 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             self,
             batch_size: int = 8,
             num_workers: int = 10,
+            streaming = True,
     ) -> None:
         super().__init__()
 
@@ -18,7 +19,7 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
 
-        self.dataset = datasets.load_dataset('lukasbraach/rwth_phoenix_weather_2014', 'multisigner', streaming=True)
+        self.dataset = datasets.load_dataset('lukasbraach/rwth_phoenix_weather_2014', 'multisigner', streaming=streaming)
 
         # data transformations
         self.transforms = transforms.Compose(
