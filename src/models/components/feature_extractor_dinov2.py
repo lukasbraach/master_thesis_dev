@@ -3,8 +3,10 @@ from typing import List, Union, Optional
 import numpy as np
 import torch
 from PIL.Image import Image
-from transformers import SequenceFeatureExtractor, TensorType, BatchFeature, logger, AutoImageProcessor, Dinov2Model
-from transformers.utils import PaddingStrategy
+from transformers import SequenceFeatureExtractor, TensorType, BatchFeature, AutoImageProcessor, Dinov2Model
+from transformers.utils import PaddingStrategy, logging
+
+logger = logging.get_logger(__name__)
 
 
 class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
@@ -131,7 +133,7 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
         with torch.no_grad():
             raw_frames = [
                 # individual encoding of frames, just to be safe...
-                [self.feature_encoder(**frame_input).logits for frame_input in frame_inputs]
+                [self.feature_encoder(**frame_input).last_hidden_state for frame_input in frame_inputs]
                 for frame_inputs in raw_frames
             ]
 
