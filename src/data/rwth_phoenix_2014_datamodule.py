@@ -62,10 +62,10 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
         :return: The train dataloader.
         """
         return DataLoader(
-            dataset=self.dataset[datasets.Split.TRAIN],
+            dataset=self.dataset[datasets.Split.TRAIN].shuffle(),
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
-            shuffle=True,
+            shuffle=False,
         )
 
     def val_dataloader(self) -> DataLoader[Any]:

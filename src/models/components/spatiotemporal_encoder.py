@@ -25,7 +25,7 @@ class SpatiotemporalEncoder(nn.Module):
         return X
 
     def preprocess_image(self, x: Image) -> torch.Tensor:
-        return self.temporal_encoder.preprocess_image(x)
+        return self.spatial_encoder.preprocess_image(x)
 
 
 if __name__ == "__main__":

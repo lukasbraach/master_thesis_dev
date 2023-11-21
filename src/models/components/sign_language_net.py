@@ -1,5 +1,6 @@
-import torch
-from torch import nn
+from tokenizers import Tokenizer
+from tokenizers.models import WordLevel
+from torch import nn, Tensor
 from transformers.modeling_outputs import CausalLMOutputWithCrossAttentions
 
 from src.models.components.language_decoder import LanguageDecoder
@@ -18,8 +19,10 @@ class SignLanguageNet(nn.Module):
         self.encoder: SpatiotemporalEncoder = spatiotemporal_encoder
         self.decoder: LanguageDecoder = language_decoder
 
-    def forward(self, x: torch.Tensor) -> CausalLMOutputWithCrossAttentions:
-        x = self.encoder.preprocess_image(x)
+        self.tokenizer = Tokenizer(WordLevel(vocab={}))
+
+    def forward(self, images: Tensor) -> CausalLMOutputWithCrossAttentions:
+        x = self.encoder.preprocess_image()
         x = self.encoder(x)
         x = self.decoder(x)
 
