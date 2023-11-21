@@ -51,7 +51,7 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
             padding: Union[bool, str, PaddingStrategy] = False,
             max_length: Optional[int] = None,
             truncation: bool = False,
-            pad_to_multiple_of: Optional[int] = 32,
+            pad_to_multiple_of: Optional[int] = None,
             return_attention_mask: Optional[bool] = None,
             return_tensors: Optional[Union[str, TensorType]] = None,
             sampling_rate: Optional[int] = None,
@@ -126,16 +126,12 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
 
         raw_frames = [
             # pre-process the frames for
-            self.image_processor(images=frame_batch, return_tensors=return_tensors)
+            self.image_processor(images=frame_batch, return_tensors="pt")
             for frame_batch in raw_frames
         ]
 
         with torch.no_grad():
-            raw_frames = [
-                # individual encoding of frames, just to be safe...
-                [self.feature_encoder(**frame_input).last_hidden_state for frame_input in frame_inputs]
-                for frame_inputs in raw_frames
-            ]
+            raw_frames = [self.feature_encoder(**frame_input).pooler_output for frame_input in raw_frames]
 
         # convert into correct format for padding
         encoded_inputs = BatchFeature({"input_values": raw_frames})
