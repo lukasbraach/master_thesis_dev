@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 from PIL import Image
 from d2l.torch import d2l
@@ -26,6 +28,7 @@ class SpatiotemporalEncoderConfig(PretrainedConfig):
 
 class SpatiotemporalEncoder(PreTrainedModel):
     config_class = SpatiotemporalEncoderConfig
+    main_input_name = "pixel_values"
 
     def __init__(self, config: SpatiotemporalEncoderConfig = SpatiotemporalEncoderConfig()) -> None:
         super().__init__(config=config)
@@ -41,12 +44,13 @@ class SpatiotemporalEncoder(PreTrainedModel):
         if isinstance(module, (Dinov2Model)):
             module.init_weights()
 
-    def forward(self, **kwargs) -> torch.Tensor:
+    def forward(self, pixel_values: Optional[torch.Tensor] = None, attention_mask: Optional[torch.Tensor] = None,
+                **kwargs) -> torch.Tensor:
         with torch.no_grad():
-            X = self.spatial_encoder(**kwargs).pooler_output
+            X = self.spatial_encoder(pixel_values=pixel_values, bool_masked_pos=attention_mask, **kwargs).pooler_output
 
         X = self.pos_encoder(X)
-        X = self.temporal_encoder(X)
+        X = self.temporal_encoder(X, mask=attention_mask)
 
         return X
 
