@@ -1,29 +1,19 @@
-import torch
 import transformers
-from torch import nn
-from transformers.modeling_outputs import CausalLMOutputWithCrossAttentions
+from transformers import Speech2Text2ForCausalLM, Speech2Text2Config
 
 
-class LanguageDecoder(nn.Module):
+class LanguageDecoder(Speech2Text2ForCausalLM):
 
     def __init__(
             self,
+            config: Speech2Text2Config = Speech2Text2Config(
+                d_model=1024,
+                decoder_ffn_dim=2048,
+                decoder_layers=6,
+                decoder_attention_heads=8,
+            )
     ) -> None:
-        super().__init__()
-
-        config = transformers.Speech2Text2Config(
-            vocab_size=1,
-            d_model=768,
-            decoder_ffn_dim=2048,
-            decoder_layers=6,
-            decoder_attention_heads=8,
-        )
-
-        self.model = transformers.Speech2Text2ForCausalLM(config)
-
-    def forward(self, x: torch.Tensor) -> CausalLMOutputWithCrossAttentions:
-        x = self.model(x)
-        return x
+        super().__init__(config)
 
 
 if __name__ == "__main__":

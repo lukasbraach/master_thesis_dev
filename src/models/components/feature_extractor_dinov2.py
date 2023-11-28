@@ -19,7 +19,7 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
     This class was adapted from transformers.Wav2Vec2FeatureExtractor.
 
     Args:
-        feature_size (`int`, defaults to 1):
+        feature_size (`int`, defaults to 224):
             The feature dimension of the extracted features.
         sampling_rate (`int`, defaults to 16000):
             The sampling rate at which the audio files should be digitalized expressed in hertz (Hz).
@@ -33,7 +33,7 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
 
     def __init__(
             self,
-            feature_size=768,
+            feature_size=224,
             sampling_rate=25,
             padding_value=0.0,
             return_attention_mask=False,
@@ -43,7 +43,6 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
         self.return_attention_mask = return_attention_mask
 
         self.image_processor = AutoImageProcessor.from_pretrained("facebook/dinov2-base")
-        self.feature_encoder = Dinov2Model.from_pretrained("facebook/dinov2-base")
 
     def __call__(
             self,
@@ -126,12 +125,9 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
 
         raw_frames = [
             # pre-process the frames for
-            self.image_processor(images=frame_batch, return_tensors="pt")
+            self.image_processor(images=frame_batch, return_tensors=return_tensors)
             for frame_batch in raw_frames
         ]
-
-        with torch.no_grad():
-            raw_frames = [self.feature_encoder(**frame_input).pooler_output for frame_input in raw_frames]
 
         # convert into correct format for padding
         encoded_inputs = BatchFeature({"input_values": raw_frames})
