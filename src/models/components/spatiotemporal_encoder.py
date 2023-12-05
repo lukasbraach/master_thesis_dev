@@ -44,12 +44,24 @@ class SpatiotemporalEncoder(PreTrainedModel):
         if isinstance(module, (Dinov2Model)):
             module.init_weights()
 
+    def _batched_spatial_encode(self, pixel_values: Optional[torch.Tensor] = None,
+                                attention_mask: Optional[torch.Tensor] = None):
+
+        def encode(i: int):
+            mask = attention_mask[i] if (attention_mask is not None) else None
+            return self.spatial_encoder(pixel_values=pixel_values[i], bool_masked_pos=mask).pooler_output
+
+        return torch.vmap(encode)(indices)
+
+    def _batched_pos_encode(self, X: Optional[torch.Tensor] = None):
+        return torch.vmap(self.pos_encoder)(X)
+
     def forward(self, pixel_values: Optional[torch.Tensor] = None, attention_mask: Optional[torch.Tensor] = None,
                 **kwargs) -> torch.Tensor:
         with torch.no_grad():
-            X = self.spatial_encoder(pixel_values=pixel_values, bool_masked_pos=attention_mask, **kwargs).pooler_output
+            X = self._batched_spatial_encode(pixel_values, attention_mask)
 
-        X = self.pos_encoder(X)
+        X = self._batched_pos_encode(X)
         X = self.temporal_encoder(X, mask=attention_mask)
 
         return X

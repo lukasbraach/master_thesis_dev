@@ -1,4 +1,3 @@
-import transformers
 from transformers import Speech2Text2ForCausalLM, Speech2Text2Config
 
 
