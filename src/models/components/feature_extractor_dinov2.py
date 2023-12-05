@@ -125,7 +125,7 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
 
         raw_frames = [
             # pre-process the frames for
-            self.image_processor(images=frame_batch, return_tensors=return_tensors)
+            self.image_processor(images=frame_batch, return_tensors=return_tensors)['pixel_values']
             for frame_batch in raw_frames
         ]
 
