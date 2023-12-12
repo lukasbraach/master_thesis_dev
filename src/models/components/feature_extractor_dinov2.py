@@ -3,7 +3,7 @@ from typing import List, Union, Optional
 import numpy as np
 import torch
 from PIL.Image import Image
-from transformers import SequenceFeatureExtractor, TensorType, BatchFeature, Dinov2Model, AutoImageProcessor
+from transformers import SequenceFeatureExtractor, BatchFeature, Dinov2Model, AutoImageProcessor
 from transformers.utils import PaddingStrategy, logging
 
 logger = logging.get_logger(__name__)
@@ -48,12 +48,9 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
     def __call__(
             self,
             raw_frames: Union[np.ndarray, List[np.ndarray], List[List[Image]]],
-            padding: Union[bool, str, PaddingStrategy] = False,
             max_length: Optional[int] = None,
             truncation: bool = False,
             pad_to_multiple_of: Optional[int] = None,
-            return_attention_mask: Optional[bool] = None,
-            return_tensors: Optional[Union[str, TensorType]] = None,
             sampling_rate: Optional[int] = None,
             **kwargs,
     ) -> BatchFeature:
@@ -128,7 +125,7 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
             x = [x]
 
         def extract(frame_batch):
-            processed = self._image_processor(images=frame_batch, return_tensors=return_tensors)
+            processed = self._image_processor(images=frame_batch)
             processed = np.array(processed['pixel_values'])
             processed = torch.tensor(processed)
 
@@ -150,11 +147,11 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
 
         padded_inputs = self.pad(
             encoded_inputs,
-            padding=padding,
+            padding=True,
             max_length=max_length,
             truncation=truncation,
             pad_to_multiple_of=pad_to_multiple_of,
-            return_attention_mask=return_attention_mask,
+            return_attention_mask=True,
         )
 
         # convert input values to correct format
@@ -172,10 +169,13 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
 
         # convert attention_mask to correct format
         attention_mask = padded_inputs.get("attention_mask")
-        if attention_mask is not None:
-            padded_inputs["attention_mask"] = [np.asarray(array, dtype=np.float64) for array in attention_mask]
+        padded_inputs["attention_mask"] = [
+            np.asarray(array, dtype=np.bool8)
+            for array in attention_mask
+        ]
 
-        if return_tensors is not None:
-            padded_inputs = padded_inputs.convert_to_tensors(return_tensors)
+        # convert all inputs to model format: [seq_len, batch_size, embedding_dim]
+        padded_inputs = padded_inputs.convert_to_tensors('pt')
+        padded_inputs.get("input_values").transpose_(0, 1)
 
         return padded_inputs

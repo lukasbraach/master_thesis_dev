@@ -1,8 +1,9 @@
 import math
+from typing import Optional
 
 import torch
 from torch import nn
-from transformers import Dinov2Model, PreTrainedModel, PretrainedConfig, AutoConfig, AutoModel, BatchFeature
+from transformers import Dinov2Model, PreTrainedModel, PretrainedConfig, AutoConfig, AutoModel
 
 
 class SpatiotemporalEncoderConfig(PretrainedConfig):
@@ -26,7 +27,7 @@ class SpatiotemporalEncoderConfig(PretrainedConfig):
 
 class SpatiotemporalEncoder(PreTrainedModel):
     config_class = SpatiotemporalEncoderConfig
-    main_input_name = "x"
+    main_input_name = "input_values"
 
     def __init__(self, config: SpatiotemporalEncoderConfig = SpatiotemporalEncoderConfig()) -> None:
         super().__init__(config=config)
@@ -41,20 +42,21 @@ class SpatiotemporalEncoder(PreTrainedModel):
         if isinstance(module, (Dinov2Model)):
             module.init_weights()
 
-    def forward(self, batch_feature: BatchFeature, **kwargs) -> torch.Tensor:
+    def forward(
+            self,
+            input_values: torch.Tensor,
+            attention_mask: Optional[torch.Tensor] = None,
+            **kwargs
+    ) -> torch.Tensor:
         """
         Arguments:
-            batch_feature: transformers.BatchFeature
+            :arg input_values: torch.Tensor, shape ``[seq_len, batch_size, embedding_dim]``
+            :arg attention_mask: torch.Tensor, shape ``[seq_len, batch_size, embedding_dim]``
         :return torch.Tensor, shape ``[seq_len, batch_size, embedding_dim]``
         """
-        batch_feature = batch_feature.convert_to_tensors('pt')
 
-        # swap batch and sequence dimensions
-        x = torch.transpose(batch_feature["input_values"], 0, 1)
-        mask = torch.transpose(x["attention_mask"], 0, 1) if hasattr(x, "attention_mask") else None
-
-        x = self.pos_encoder(x)
-        x = self.temporal_encoder(x, mask)
+        x = self.pos_encoder(input_values)
+        x = self.temporal_encoder(x, attention_mask)
 
         return x
 
