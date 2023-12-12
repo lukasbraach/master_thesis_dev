@@ -3,7 +3,8 @@ from typing import List, Union, Optional
 import numpy as np
 import torch
 from PIL.Image import Image
-from transformers import SequenceFeatureExtractor, TensorType, BatchFeature, AutoImageProcessor, Dinov2Model
+from d2l.torch import d2l
+from transformers import SequenceFeatureExtractor, TensorType, BatchFeature, Dinov2Model, AutoImageProcessor
 from transformers.utils import PaddingStrategy, logging
 
 logger = logging.get_logger(__name__)
@@ -33,7 +34,7 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
 
     def __init__(
             self,
-            feature_size=224,
+            feature_size=768,
             sampling_rate=25,
             padding_value=0.0,
             return_attention_mask=False,
@@ -42,7 +43,8 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
         super().__init__(feature_size=feature_size, sampling_rate=sampling_rate, padding_value=padding_value, **kwargs)
         self.return_attention_mask = return_attention_mask
 
-        self.image_processor = AutoImageProcessor.from_pretrained("facebook/dinov2-base")
+        self._image_processor = AutoImageProcessor.from_pretrained("facebook/dinov2-base")
+        self._spatial_encoder = Dinov2Model.from_pretrained("facebook/dinov2-base")
 
     def __call__(
             self,
@@ -119,18 +121,26 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
                 isinstance(raw_frames, (list, tuple)) and (isinstance(raw_frames[0], (np.ndarray, tuple, list)))
         )
 
+        x = raw_frames
+
         # always return batch
         if not is_batched:
-            raw_frames = [raw_frames]
+            x = [x]
 
-        raw_frames = [
-            # pre-process the frames for
-            self.image_processor(images=frame_batch, return_tensors=return_tensors)['pixel_values']
-            for frame_batch in raw_frames
+        x = [
+            self._image_processor(images=frame_batch, return_tensors=return_tensors)['pixel_values']
+            for frame_batch in x
         ]
 
+
+        with torch.no_grad():
+            x = [
+                self._spatial_encoder(feature_batch)
+                for feature_batch in x
+            ]
+
         # convert into correct format for padding
-        encoded_inputs = BatchFeature({"input_values": raw_frames})
+        encoded_inputs = BatchFeature({"input_values": x})
 
         padded_inputs = self.pad(
             encoded_inputs,
