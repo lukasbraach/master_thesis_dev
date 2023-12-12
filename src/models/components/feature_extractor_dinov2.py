@@ -3,7 +3,6 @@ from typing import List, Union, Optional
 import numpy as np
 import torch
 from PIL.Image import Image
-from d2l.torch import d2l
 from transformers import SequenceFeatureExtractor, TensorType, BatchFeature, Dinov2Model, AutoImageProcessor
 from transformers.utils import PaddingStrategy, logging
 
@@ -48,7 +47,7 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
 
     def __call__(
             self,
-            raw_frames: Union[np.ndarray, List[Image], List[np.ndarray], List[List[Image]]],
+            raw_frames: Union[np.ndarray, List[np.ndarray], List[List[Image]]],
             padding: Union[bool, str, PaddingStrategy] = False,
             max_length: Optional[int] = None,
             truncation: bool = False,
@@ -115,8 +114,9 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
             )
 
         is_batched_numpy = isinstance(raw_frames, np.ndarray) and len(raw_frames.shape) > 1
-        if is_batched_numpy and len(raw_frames.shape) != 2:
-            raise ValueError(f"Input raw_frames has wrong dimension: expected dimension 4 (batch, 3) {self}")
+        if is_batched_numpy and len(raw_frames.shape) != 5:
+            raise ValueError(
+                f"Input raw_frames has wrong dimension: expected dimension 5 (batch_no, video_frame_no, 3)")
         is_batched = is_batched_numpy or (
                 isinstance(raw_frames, (list, tuple)) and (isinstance(raw_frames[0], (np.ndarray, tuple, list)))
         )
@@ -127,15 +127,21 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
         if not is_batched:
             x = [x]
 
+        def extract(frame_batch):
+            processed = self._image_processor(images=frame_batch, return_tensors=return_tensors)
+            processed = np.array(processed['pixel_values'])
+            processed = torch.tensor(processed)
+
+            return processed
+
         x = [
-            self._image_processor(images=frame_batch, return_tensors=return_tensors)['pixel_values']
+            extract(frame_batch)
             for frame_batch in x
         ]
 
-
         with torch.no_grad():
             x = [
-                self._spatial_encoder(feature_batch)
+                self._spatial_encoder(feature_batch).pooler_output
                 for feature_batch in x
             ]
 
