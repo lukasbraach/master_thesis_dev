@@ -173,7 +173,7 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
         # convert attention_mask to correct format
         attention_mask = padded_inputs.get("attention_mask")
         if attention_mask is not None:
-            padded_inputs["attention_mask"] = [np.asarray(array, dtype=np.int32) for array in attention_mask]
+            padded_inputs["attention_mask"] = [np.asarray(array, dtype=np.float64) for array in attention_mask]
 
         if return_tensors is not None:
             padded_inputs = padded_inputs.convert_to_tensors(return_tensors)

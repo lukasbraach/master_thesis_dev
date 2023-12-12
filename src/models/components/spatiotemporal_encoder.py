@@ -1,7 +1,8 @@
 import torch
-from d2l.torch import d2l
 from torch import nn
 from transformers import Dinov2Model, PreTrainedModel, PretrainedConfig, AutoConfig, AutoModel, BatchFeature
+
+from src.models.components.positional_encoding import PositionalEncoding
 
 
 class SpatiotemporalEncoderConfig(PretrainedConfig):
@@ -30,7 +31,7 @@ class SpatiotemporalEncoder(PreTrainedModel):
     def __init__(self, config: SpatiotemporalEncoderConfig = SpatiotemporalEncoderConfig()) -> None:
         super().__init__(config=config)
 
-        self.pos_encoder = d2l.PositionalEncoding(num_hiddens=config.hidden_size, dropout=config.dropout)
+        self.pos_encoder = PositionalEncoding(d_model=config.hidden_size, dropout=config.dropout)
 
         encoder_layer = nn.TransformerEncoderLayer(d_model=config.hidden_size, nhead=config.num_attention_heads,
                                                    dropout=config.dropout)
@@ -40,9 +41,15 @@ class SpatiotemporalEncoder(PreTrainedModel):
         if isinstance(module, (Dinov2Model)):
             module.init_weights()
 
-    def forward(self, x: BatchFeature, **kwargs) -> torch.Tensor:
-        x["input_values"] = torch.vmap(self.pos_encoder)(x["input_values"])
-        x = self.temporal_encoder(x["input_values"], mask=x["attention_mask"])
+    def forward(self, x: BatchFeature, **kwargs) -> BatchFeature:
+        x["input_values"] = self.pos_encoder(x["input_values"])
+        x["attention_mask"] = x["attention_mask"] if hasattr(x, "attention_mask") else None
+
+        x["input_values"] = torch.vmap(
+            self.temporal_encoder,
+            randomness='different',
+            in_dims=(0, None if x["attention_mask"] is None else 0)
+        )(x["input_values"], x["attention_mask"])
 
         return x
 
