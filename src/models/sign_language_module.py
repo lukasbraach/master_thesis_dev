@@ -1,20 +1,20 @@
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, Optional
 
 import torch
 from lightning import LightningModule
-from torchmetrics import MaxMetric, MeanMetric
-from torchmetrics.classification.accuracy import Accuracy
+from torchmetrics import MeanMetric, WordErrorRate, MinMetric
+
+from src.models.components.sign_language_net import SignLanguageNet
 
 
-class ASLLitModule(LightningModule):
+class SignLanguageLitModule(LightningModule):
     def __init__(
-        self,
-        net: torch.nn.Module,
-        optimizer: torch.optim.Optimizer,
-        scheduler: torch.optim.lr_scheduler,
-        compile: bool,
+            self,
+            optimizer: torch.optim.Optimizer,
+            scheduler: torch.optim.lr_scheduler,
+            compile: bool,
     ) -> None:
-        """Initialize a `MNISTLitModule`.
+        """Initialize a `SignLanguageLitModule`.
 
         :param net: The model to train.
         :param optimizer: The optimizer to use for training.
@@ -26,12 +26,12 @@ class ASLLitModule(LightningModule):
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
 
-        self.net = net
+        self.net = SignLanguageNet()
 
         # metric objects for calculating and averaging accuracy across batches
-        self.train_acc = Accuracy(task="multiclass", num_classes=10)
-        self.val_acc = Accuracy(task="multiclass", num_classes=10)
-        self.test_acc = Accuracy(task="multiclass", num_classes=10)
+        self.train_wer = WordErrorRate()
+        self.val_wer = WordErrorRate()
+        self.test_wer = WordErrorRate()
 
         # for averaging loss across batches
         self.train_loss = MeanMetric()
@@ -39,15 +39,20 @@ class ASLLitModule(LightningModule):
         self.test_loss = MeanMetric()
 
         # for tracking best so far validation accuracy
-        self.val_acc_best = MaxMetric()
+        self.val_wer_best = MinMetric()
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(
+            self,
+            input_values: torch.Tensor,
+            attention_mask: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         """Perform a forward pass through the model `self.net`.
 
         :param x: A tensor of images.
         :return: A tensor of logits.
         """
-        return self.net(x)
+        outputs = self.net(input_values=input_values, attention_mask=attention_mask)
+        return outputs.logits
 
     def on_train_start(self) -> None:
         """Lightning hook that is called when training begins."""
@@ -58,7 +63,7 @@ class ASLLitModule(LightningModule):
         self.val_acc_best.reset()
 
     def model_step(
-        self, batch: Tuple[torch.Tensor, torch.Tensor]
+            self, batch: Tuple[torch.Tensor, torch.Tensor]
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Perform a single model step on a batch of data.
 
@@ -76,7 +81,7 @@ class ASLLitModule(LightningModule):
         return loss, preds, y
 
     def training_step(
-        self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
+            self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
         """Perform a single training step on a batch of data from the training set.
 
@@ -179,4 +184,4 @@ class ASLLitModule(LightningModule):
 
 
 if __name__ == "__main__":
-    _ = ASLLitModule(None, None, None, None)
+    _ = SignLanguageLitModule(None, None, None, None)

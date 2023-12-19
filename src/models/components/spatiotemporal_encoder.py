@@ -11,6 +11,7 @@ class SpatiotemporalEncoderConfig(Wav2Vec2Config):
                  dropout: float = 0.1,
                  num_attention_heads: int = 8,
                  num_hidden_layers=6,
+                 mask_time_length=1,
                  **kwargs
                  ) -> None:
         super().__init__(
@@ -18,6 +19,7 @@ class SpatiotemporalEncoderConfig(Wav2Vec2Config):
             dropout=dropout,
             num_attention_heads=num_attention_heads,
             num_hidden_layers=num_hidden_layers,
+            mask_time_length=mask_time_length,
             **kwargs
         )
 

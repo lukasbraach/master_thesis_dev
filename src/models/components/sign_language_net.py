@@ -5,6 +5,8 @@ from src.models.components.spatiotemporal_encoder import SpatiotemporalEncoder, 
 
 
 class SignLanguageNet(SpeechEncoderDecoderModel):
+    base_model_prefix = "sign_language_encoder_decoder"
+    main_input_name = "input_values"
 
     def __init__(
             self,
