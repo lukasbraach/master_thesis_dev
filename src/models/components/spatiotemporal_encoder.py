@@ -1,10 +1,5 @@
-import math
-from typing import Optional, Union, Tuple
-
-import torch
 from torch import nn
 from transformers import AutoConfig, AutoModel, Wav2Vec2Config
-from transformers.modeling_outputs import Wav2Vec2BaseModelOutput
 from transformers.models.wav2vec2.modeling_wav2vec2 import Wav2Vec2Model
 
 
@@ -27,8 +22,31 @@ class SpatiotemporalEncoderConfig(Wav2Vec2Config):
         )
 
 
-class SpatiotemporalEncoder(Wav2Vec2Model):
+class SpatialFeatureEncoder(nn.Module):
+    """Construct the features from raw video frames"""
 
+    def __init__(self, config: SpatiotemporalEncoderConfig):
+        super().__init__()
+
+    @staticmethod
+    def forward(input_values):
+        return input_values.transpose(1, 2)
+
+
+class SpatiotemporalFeatureProjection(nn.Module):
+    def __init__(self, config: SpatiotemporalEncoderConfig):
+        super().__init__()
+        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
+        self.dropout = nn.Dropout(config.feat_proj_dropout)
+
+    def forward(self, hidden_states):
+        # non-projected hidden states are needed for quantization
+        norm_hidden_states = self.layer_norm(hidden_states)
+        hidden_states = self.dropout(norm_hidden_states)
+        return hidden_states, norm_hidden_states
+
+
+class SpatiotemporalEncoder(Wav2Vec2Model):
     config_class = SpatiotemporalEncoderConfig
     base_model_prefix = "spatiotemporal-encoder"
     main_input_name = "input_values"
@@ -37,90 +55,16 @@ class SpatiotemporalEncoder(Wav2Vec2Model):
     def __init__(self, config: SpatiotemporalEncoderConfig):
         super().__init__(config)
 
-    def forward(
-        self,
-        input_values: Optional[torch.FloatTensor],
-        attention_mask: Optional[torch.LongTensor] = None,
-        mask_time_indices: Optional[torch.FloatTensor] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, Wav2Vec2BaseModelOutput]:
-        """
+        # we have to overwrite these parts for our purposes
+        self.feature_extractor = SpatialFeatureEncoder(config)
+        self.feature_projection = SpatiotemporalFeatureProjection(config)
 
-        :param input_values: torch.Tensor [batch_size, sequence_length, embed_dim]
-        :param attention_mask:
-        :param mask_time_indices:
-        :param output_attentions:
-        :param output_hidden_states:
-        :param return_dict:
-        :return:
-        """
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
-        )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-
-        if attention_mask is not None:
-            # compute reduced attention_mask corresponding to feature vectors
-            attention_mask = self._get_feature_vector_attention_mask(
-                input_values.shape[1], attention_mask, add_adapter=False
-            )
-
-        hidden_states = self._mask_hidden_states(
-            input_values, mask_time_indices=mask_time_indices, attention_mask=attention_mask
-        )
-
-        encoder_outputs = self.encoder(
-            hidden_states,
-            attention_mask=attention_mask,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
-        )
-
-        hidden_states = encoder_outputs[0]
-
-        if self.adapter is not None:
-            hidden_states = self.adapter(hidden_states)
-
-        if not return_dict:
-            return (hidden_states, input_values) + encoder_outputs[1:]
-
-        return Wav2Vec2BaseModelOutput(
-            last_hidden_state=hidden_states,
-            extract_features=input_values,
-            hidden_states=encoder_outputs.hidden_states,
-            attentions=encoder_outputs.attentions,
-        )
-
-
-class PositionalEncoding(nn.Module):
-    # from https://pytorch.org/tutorials/beginner/transformer_tutorial.html#define-the-model
-
-    def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 5000):
-        super().__init__()
-        self.dropout = nn.Dropout(p=dropout)
-
-        position = torch.arange(max_len).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
-        pe = torch.zeros(max_len, 1, d_model)
-        pe[:, 0, 0::2] = torch.sin(position * div_term)
-        pe[:, 0, 1::2] = torch.cos(position * div_term)
-        self.register_buffer('pe', pe)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Arguments:
-            x: torch.Tensor, shape ``[seq_len, batch_size, embedding_dim]``
-        """
-        x = x + self.pe[:x.size(0)]
-        return self.dropout(x)
+        # Initialize weights and apply final processing
+        self.post_init()
 
 
 if __name__ == "__main__":
-    _ = SpatiotemporalEncoder()
+    _ = SpatiotemporalEncoder(SpatiotemporalEncoderConfig())
 
 AutoConfig.register("spatiotemporal-encoder", SpatiotemporalEncoderConfig)
 AutoModel.register(SpatiotemporalEncoderConfig, SpatiotemporalEncoder)
