@@ -1,12 +1,14 @@
 import math
-from typing import Optional
+from typing import Optional, Union, Tuple
 
 import torch
 from torch import nn
-from transformers import Dinov2Model, PreTrainedModel, PretrainedConfig, AutoConfig, AutoModel
+from transformers import AutoConfig, AutoModel, Wav2Vec2Config
+from transformers.modeling_outputs import Wav2Vec2BaseModelOutput
+from transformers.models.wav2vec2.modeling_wav2vec2 import Wav2Vec2Model
 
 
-class SpatiotemporalEncoderConfig(PretrainedConfig):
+class SpatiotemporalEncoderConfig(Wav2Vec2Config):
     model_type = "spatiotemporal-encoder"
 
     def __init__(self,
@@ -25,40 +27,73 @@ class SpatiotemporalEncoderConfig(PretrainedConfig):
         )
 
 
-class SpatiotemporalEncoder(PreTrainedModel):
+class SpatiotemporalEncoder(Wav2Vec2Model):
+
     config_class = SpatiotemporalEncoderConfig
+    base_model_prefix = "spatiotemporal-encoder"
     main_input_name = "input_values"
+    supports_gradient_checkpointing = True
 
-    def __init__(self, config: SpatiotemporalEncoderConfig = SpatiotemporalEncoderConfig()) -> None:
-        super().__init__(config=config)
-
-        self.pos_encoder = PositionalEncoding(d_model=config.hidden_size, dropout=config.dropout)
-
-        encoder_layer = nn.TransformerEncoderLayer(d_model=config.hidden_size, nhead=config.num_attention_heads,
-                                                   dropout=config.dropout)
-        self.temporal_encoder = nn.TransformerEncoder(encoder_layer, num_layers=config.num_hidden_layers)
-
-    def _init_weights(self, module):
-        if isinstance(module, (Dinov2Model)):
-            module.init_weights()
+    def __init__(self, config: SpatiotemporalEncoderConfig):
+        super().__init__(config)
 
     def forward(
-            self,
-            input_values: torch.Tensor,
-            attention_mask: Optional[torch.Tensor] = None,
-            **kwargs
-    ) -> torch.Tensor:
-        """
-        Arguments:
-            :arg input_values: torch.Tensor, shape ``[seq_len, batch_size, embedding_dim]``
-            :arg attention_mask: torch.Tensor, shape ``[seq_len, batch_size, embedding_dim]``
-        :return torch.Tensor, shape ``[seq_len, batch_size, embedding_dim]``
+        self,
+        input_values: Optional[torch.FloatTensor],
+        attention_mask: Optional[torch.LongTensor] = None,
+        mask_time_indices: Optional[torch.FloatTensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Union[Tuple, Wav2Vec2BaseModelOutput]:
         """
 
-        x = self.pos_encoder(input_values)
-        x = self.temporal_encoder(x, attention_mask)
+        :param input_values: torch.Tensor [batch_size, sequence_length, embed_dim]
+        :param attention_mask:
+        :param mask_time_indices:
+        :param output_attentions:
+        :param output_hidden_states:
+        :param return_dict:
+        :return:
+        """
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_hidden_states = (
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        return x
+        if attention_mask is not None:
+            # compute reduced attention_mask corresponding to feature vectors
+            attention_mask = self._get_feature_vector_attention_mask(
+                input_values.shape[1], attention_mask, add_adapter=False
+            )
+
+        hidden_states = self._mask_hidden_states(
+            input_values, mask_time_indices=mask_time_indices, attention_mask=attention_mask
+        )
+
+        encoder_outputs = self.encoder(
+            hidden_states,
+            attention_mask=attention_mask,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        hidden_states = encoder_outputs[0]
+
+        if self.adapter is not None:
+            hidden_states = self.adapter(hidden_states)
+
+        if not return_dict:
+            return (hidden_states, input_values) + encoder_outputs[1:]
+
+        return Wav2Vec2BaseModelOutput(
+            last_hidden_state=hidden_states,
+            extract_features=input_values,
+            hidden_states=encoder_outputs.hidden_states,
+            attentions=encoder_outputs.attentions,
+        )
 
 
 class PositionalEncoding(nn.Module):

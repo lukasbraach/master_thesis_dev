@@ -3,6 +3,7 @@ from typing import List, Union, Optional
 import numpy as np
 import torch
 from PIL.Image import Image
+from torch import TensorType
 from transformers import SequenceFeatureExtractor, BatchFeature, Dinov2Model, AutoImageProcessor
 from transformers.utils import PaddingStrategy, logging
 
@@ -48,9 +49,12 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
     def __call__(
             self,
             raw_frames: Union[np.ndarray, List[np.ndarray], List[List[Image]]],
+            padding: Union[bool, str, PaddingStrategy] = 'longest',
             max_length: Optional[int] = None,
             truncation: bool = False,
             pad_to_multiple_of: Optional[int] = None,
+            return_attention_mask: Optional[bool] = True,
+            return_tensors: Optional[Union[str, TensorType]] = 'pt',
             sampling_rate: Optional[int] = None,
             **kwargs,
     ) -> BatchFeature:
@@ -147,11 +151,11 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
 
         padded_inputs = self.pad(
             encoded_inputs,
-            padding=True,
+            padding=padding,
             max_length=max_length,
             truncation=truncation,
             pad_to_multiple_of=pad_to_multiple_of,
-            return_attention_mask=True,
+            return_attention_mask=return_attention_mask,
         )
 
         # convert input values to correct format
@@ -169,13 +173,10 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
 
         # convert attention_mask to correct format
         attention_mask = padded_inputs.get("attention_mask")
-        padded_inputs["attention_mask"] = [
-            np.asarray(array, dtype=np.bool8)
-            for array in attention_mask
-        ]
+        if attention_mask is not None:
+            padded_inputs["attention_mask"] = [np.asarray(array, dtype=np.int32) for array in attention_mask]
 
-        # convert all inputs to model format: [seq_len, batch_size, embedding_dim]
-        padded_inputs = padded_inputs.convert_to_tensors('pt')
-        padded_inputs.get("input_values").transpose_(0, 1)
+        if return_tensors is not None:
+            padded_inputs = padded_inputs.convert_to_tensors(return_tensors)
 
         return padded_inputs
