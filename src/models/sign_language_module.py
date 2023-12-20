@@ -1,7 +1,10 @@
 from typing import Any, Dict, Tuple, Optional
 
+import datasets
 import torch
 from lightning import LightningModule
+from torch import nn
+from torch.utils.data import DataLoader
 from torchmetrics import MeanMetric, WordErrorRate, MinMetric
 
 from src.models.components.sign_language_net import SignLanguageNet
@@ -26,7 +29,9 @@ class SignLanguageLitModule(LightningModule):
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
 
+        self.dataset: datasets.Dataset = None
         self.net = SignLanguageNet()
+        self.criterion = nn.CTCLoss(blank=-100)
 
         # metric objects for calculating and averaging accuracy across batches
         self.train_wer = WordErrorRate()
@@ -46,7 +51,8 @@ class SignLanguageLitModule(LightningModule):
             input_values: torch.Tensor,
             attention_mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
-        """Perform a forward pass through the model `self.net`.
+        """
+        Perform a forward pass through the model `self.net`.
 
         :param x: A tensor of images.
         :return: A tensor of logits.
@@ -55,7 +61,9 @@ class SignLanguageLitModule(LightningModule):
         return outputs.logits
 
     def on_train_start(self) -> None:
-        """Lightning hook that is called when training begins."""
+        """
+        Lightning hook that is called when training begins.
+        """
         # by default lightning executes validation step sanity checks before training starts,
         # so it's worth to make sure validation metrics don't store results from these checks
         self.val_loss.reset()
@@ -65,7 +73,8 @@ class SignLanguageLitModule(LightningModule):
     def model_step(
             self, batch: Tuple[torch.Tensor, torch.Tensor]
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Perform a single model step on a batch of data.
+        """
+        Perform a single model step on a batch of data.
 
         :param batch: A batch of data (a tuple) containing the input tensor of images and target labels.
 
@@ -76,14 +85,15 @@ class SignLanguageLitModule(LightningModule):
         """
         x, y = batch
         logits = self.forward(x)
-        loss = self.criterion(logits, y)
+        loss = self.criterion(logits, y, input_lengths, target_lengths)
         preds = torch.argmax(logits, dim=1)
         return loss, preds, y
 
     def training_step(
             self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
-        """Perform a single training step on a batch of data from the training set.
+        """
+        Perform a single training step on a batch of data from the training set.
 
         :param batch: A batch of data (a tuple) containing the input tensor of images and target
             labels.
@@ -106,7 +116,8 @@ class SignLanguageLitModule(LightningModule):
         pass
 
     def validation_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> None:
-        """Perform a single validation step on a batch of data from the validation set.
+        """
+        Perform a single validation step on a batch of data from the validation set.
 
         :param batch: A batch of data (a tuple) containing the input tensor of images and target
             labels.
@@ -121,7 +132,10 @@ class SignLanguageLitModule(LightningModule):
         self.log("val/acc", self.val_acc, on_step=False, on_epoch=True, prog_bar=True)
 
     def on_validation_epoch_end(self) -> None:
-        "Lightning hook that is called when a validation epoch ends."
+        """
+        Lightning hook that is called when a validation epoch ends.
+        :return:
+        """
         acc = self.val_acc.compute()  # get current val acc
         self.val_acc_best(acc)  # update best so far val acc
         # log `val_acc_best` as a value through `.compute()` method, instead of as a metric object
@@ -129,7 +143,8 @@ class SignLanguageLitModule(LightningModule):
         self.log("val/acc_best", self.val_acc_best.compute(), sync_dist=True, prog_bar=True)
 
     def test_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> None:
-        """Perform a single test step on a batch of data from the test set.
+        """
+        Perform a single test step on a batch of data from the test set.
 
         :param batch: A batch of data (a tuple) containing the input tensor of images and target
             labels.
@@ -147,6 +162,16 @@ class SignLanguageLitModule(LightningModule):
         """Lightning hook that is called when a test epoch ends."""
         pass
 
+    def prepare_data(self) -> None:
+        """
+        Use this to download and prepare data. Downloading and saving data with multiple processes (distributed
+        settings) will result in corrupted data. Lightning ensures this method is called only within a single
+        process, so you can safely add your downloading logic within.
+
+        .. warning:: DO NOT set state to the model (use ``setup`` instead)
+            since this is NOT called on every device
+        """
+
     def setup(self, stage: str) -> None:
         """Lightning hook that is called at the beginning of fit (train + validate), validate,
         test, or predict.
@@ -156,11 +181,14 @@ class SignLanguageLitModule(LightningModule):
 
         :param stage: Either `"fit"`, `"validate"`, `"test"`, or `"predict"`.
         """
+        self._load_dataset()
+
         if self.hparams.compile and stage == "fit":
             self.net = torch.compile(self.net)
 
     def configure_optimizers(self) -> Dict[str, Any]:
-        """Choose what optimizers and learning-rate schedulers to use in your optimization.
+        """
+        Choose what optimizers and learning-rate schedulers to use in your optimization.
         Normally you'd need one. But in the case of GANs or similar you might have multiple.
 
         Examples:
@@ -181,6 +209,19 @@ class SignLanguageLitModule(LightningModule):
                 },
             }
         return {"optimizer": optimizer}
+
+    def _load_dataset(self):
+        self.dataset = datasets.load_dataset('lukasbraach/rwth_phoenix_weather_2014', 'multisigner', streaming=True)
+        self.dataset.set_format(type="torch", columns=['frames', 'tokens'])
+
+    def train_dataloader(self):
+        return DataLoader(self.dataset['train'], shuffle=True, batch_size=8)
+
+    def val_dataloader(self):
+        return DataLoader(self.dataset['validation'], batch_size=4)
+
+    def test_dataloader(self):
+        return DataLoader(self.dataset['test'], batch_size=4)
 
 
 if __name__ == "__main__":
