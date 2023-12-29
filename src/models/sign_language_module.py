@@ -3,7 +3,6 @@ from typing import Any, Dict, Tuple, Optional
 import torch
 from lightning import LightningModule
 from torchmetrics import MeanMetric, WordErrorRate, MinMetric
-from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast
 from transformers.modeling_outputs import Seq2SeqLMOutput
 
 from src.models.components.sign_language_net import SignLanguageNet
@@ -14,6 +13,7 @@ class SignLanguageLitModule(LightningModule):
             self,
             optimizer: torch.optim.Optimizer,
             scheduler: torch.optim.lr_scheduler,
+            net: SignLanguageNet,
             compile: bool,
     ) -> None:
         """Initialize a `SignLanguageLitModule`.
@@ -28,21 +28,7 @@ class SignLanguageLitModule(LightningModule):
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
 
-        tokenizer = PreTrainedTokenizerFast(
-            model_input_names=['input_values'],
-            pad_token="__PAD__",
-            bos_token="__ON__",
-            eos_token="__OFF__",
-            unk_token="__UNK__",
-            tokenizer_file="../etc/rwth_phoenix_tokenizer.json"
-        )
-        self.net = SignLanguageNet(tokenizer=tokenizer)
-        self.collator = DataCollatorForSeq2Seq(
-            model=self.net,
-            tokenizer=self.tokenizer,
-            pad_to_multiple_of=16,
-            return_tensors='pt'
-        )
+        self.net = net
 
         # metric objects for calculating and averaging accuracy across batches
         self.train_wer = WordErrorRate()
@@ -83,7 +69,7 @@ class SignLanguageLitModule(LightningModule):
         self.val_wer_best.reset()
 
     def model_step(
-            self, batch: Tuple[dict]
+            self, batch: dict
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Perform a single model step on a batch of data.
@@ -95,15 +81,13 @@ class SignLanguageLitModule(LightningModule):
             - A tensor of predictions.
             - A tensor of target labels.
         """
-        x = self.collator(batch)
-
-        output = self.forward(**x)
+        output = self.forward(**batch)
         preds = torch.argmax(output.logits, dim=2)
 
-        return output.loss, preds, x["labels"]
+        return output.loss, preds, batch["labels"]
 
     def training_step(
-            self, batch: Tuple[dict], batch_idx: int
+            self, batch: dict, batch_idx: int
     ) -> torch.Tensor:
         """
         Perform a single training step on a batch of data from the training set.
@@ -129,7 +113,7 @@ class SignLanguageLitModule(LightningModule):
         "Lightning hook that is called when a training epoch ends."
         pass
 
-    def validation_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> None:
+    def validation_step(self, batch: dict, batch_idx: int) -> None:
         """
         Perform a single validation step on a batch of data from the validation set.
 
@@ -156,7 +140,7 @@ class SignLanguageLitModule(LightningModule):
         # otherwise metric would be reset by lightning after each epoch
         self.log("val/acc_best", self.val_acc_best.compute(), sync_dist=True, prog_bar=True)
 
-    def test_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> None:
+    def test_step(self, batch: dict, batch_idx: int) -> None:
         """
         Perform a single test step on a batch of data from the test set.
 

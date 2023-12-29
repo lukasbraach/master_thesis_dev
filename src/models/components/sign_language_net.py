@@ -1,6 +1,9 @@
-import typing
+from transformers import SpeechEncoderDecoderModel, Speech2Text2Config, SpeechEncoderDecoderConfig, \
+    PreTrainedTokenizerFast
 
-from transformers import SpeechEncoderDecoderModel, Speech2Text2Config, SpeechEncoderDecoderConfig, PreTrainedTokenizer, \
+from src.models.components.language_decoder import LanguageDecoder
+from src.models.components.spatiotemporal_encoder import SpatiotemporalEncoder, SpatiotemporalEncoderConfig
+from transformers import SpeechEncoderDecoderModel, Speech2Text2Config, SpeechEncoderDecoderConfig, \
     PreTrainedTokenizerFast
 
 from src.models.components.language_decoder import LanguageDecoder
@@ -13,8 +16,19 @@ class SignLanguageNet(SpeechEncoderDecoderModel):
 
     def __init__(
             self,
-            tokenizer: typing.Union[PreTrainedTokenizer, PreTrainedTokenizerFast],
+            tokenizer_file="../etc/rwth_phoenix_tokenizer.json",
     ) -> None:
+        print(f"SignLanguageNet tokenizer_file: {tokenizer_file}")
+
+        tokenizer = PreTrainedTokenizerFast(
+            model_input_names=['input_values'],
+            pad_token="__PAD__",
+            bos_token="__ON__",
+            eos_token="__OFF__",
+            unk_token="__UNK__",
+            tokenizer_file=tokenizer_file,
+        )
+
         encoder = SpatiotemporalEncoder(SpatiotemporalEncoderConfig())
         decoder = LanguageDecoder(Speech2Text2Config(
             pad_token_id=tokenizer.pad_token_id,

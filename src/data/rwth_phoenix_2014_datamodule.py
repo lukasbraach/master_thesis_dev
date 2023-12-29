@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional
 import datasets
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader
-from transformers import PreTrainedTokenizerFast
+from transformers import PreTrainedTokenizerFast, DataCollatorForSeq2Seq
 
 from src.models.components.feature_extractor_dinov2 import SignLanguageFeatureExtractor
 
@@ -14,38 +14,40 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             batch_size: int = 1,
             num_workers: int = 12,
             streaming=True,
+            pin_memory=False,
+            tokenizer_file="../etc/rwth_phoenix_tokenizer.json"
     ) -> None:
         super().__init__()
+
+        print(f"SignLanguageNet tokenizer_file: {tokenizer_file}")
 
         # this line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
 
-        dataset = datasets.load_dataset(
-            'lukasbraach/rwth_phoenix_weather_2014',
-            'multisigner',
-            streaming=True,
-            num_proc=12
-        )
-        dataset.set_format(type="torch", columns=['frames', 'tokens'])
-
-        tokenizer = PreTrainedTokenizerFast(
+        self.tokenizer = PreTrainedTokenizerFast(
             model_input_names=['input_values'],
             pad_token="__PAD__",
             bos_token="__ON__",
             eos_token="__OFF__",
             unk_token="__UNK__",
-            tokenizer_file="../etc/rwth_phoenix_tokenizer.json"
+            tokenizer_file=tokenizer_file,
         )
-        pre_processor = SignLanguageFeatureExtractor()
 
-        def map_dataset(batch):
-            labels = tokenizer(batch['tokens'], is_split_into_words=True)
-            feature = pre_processor(batch['frames'], sampling_rate=25)
+        self.pre_processor = SignLanguageFeatureExtractor()
 
-            return {'input_values': feature.input_values[0], 'labels': labels.ids}
+        self.collator = DataCollatorForSeq2Seq(
+            tokenizer=self.tokenizer,
+            pad_to_multiple_of=16,
+            return_tensors='pt'
+        )
 
-        self.dataset = dataset.map(function=map_dataset, batched=False, remove_columns=['frames', 'tokens'])
+        self.dataset = datasets.load_dataset(
+            'lukasbraach/rwth_phoenix_weather_2014',
+            'multisigner',
+            streaming=True
+        )
+
         self.batch_size_per_device = batch_size
 
     def prepare_data(self) -> None:
@@ -76,15 +78,28 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
                 )
             self.batch_size_per_device = self.hparams.batch_size // self.trainer.world_size
 
+    def _map_dataset(self, batch):
+        labels = self.tokenizer(batch['tokens'], is_split_into_words=True)
+        feature = self.pre_processor(batch['frames'], sampling_rate=25)
+
+        return {'input_values': feature.input_values[0], 'labels': labels.ids}
+
     def train_dataloader(self) -> DataLoader[Any]:
         """Create and return the train dataloader.
 
         :return: The train dataloader.
         """
+        subset = self.dataset[datasets.Split.TRAIN]
+
         return DataLoader(
-            dataset=self.dataset[datasets.Split.TRAIN].shuffle(),
+            dataset=subset.map(
+                function=self._map_dataset,
+                batched=False,
+                remove_columns=['frames', 'tokens']
+            ),
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
+            collate_fn=self.collator,
             shuffle=False,
         )
 
@@ -93,10 +108,17 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
 
         :return: The validation dataloader.
         """
+        subset = self.dataset[datasets.Split.VALIDATION]
+
         return DataLoader(
-            dataset=self.dataset[datasets.Split.VALIDATION],
+            dataset=subset.map(
+                function=self._map_dataset,
+                batched=False,
+                remove_columns=['frames', 'tokens']
+            ),
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
+            collate_fn=self.collator,
             shuffle=False,
         )
 
@@ -105,10 +127,17 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
 
         :return: The test dataloader.
         """
+        subset = self.dataset[datasets.Split.TEST]
+
         return DataLoader(
-            dataset=self.dataset[datasets.Split.TEST],
+            dataset=subset.map(
+                function=self._map_dataset,
+                batched=False,
+                remove_columns=['frames', 'tokens']
+            ),
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
+            collate_fn=self.collator,
             shuffle=False,
         )
 
