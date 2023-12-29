@@ -33,6 +33,7 @@ class SignLanguageLitModule(LightningModule):
 
         self.dataset: datasets.Dataset = None
         self.tokenizer = PreTrainedTokenizerFast(
+            model_input_names=['input_values'],
             pad_token="__PAD__",
             bos_token="__ON__",
             eos_token="__OFF__",
@@ -87,7 +88,7 @@ class SignLanguageLitModule(LightningModule):
         self.val_wer_best.reset()
 
     def model_step(
-            self, batch: Tuple[torch.Tensor, torch.Tensor]
+            self, batch: Tuple[dict]
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Perform a single model step on a batch of data.
@@ -99,12 +100,12 @@ class SignLanguageLitModule(LightningModule):
             - A tensor of predictions.
             - A tensor of target labels.
         """
-        x, truth = batch
+        x = self.collator(batch)
 
-        output = self.forward(x)
+        output = self.forward(**x)
         preds = torch.argmax(output.logits, dim=2)
 
-        return output.loss, preds, truth
+        return output.loss, preds, x["labels"]
 
     def training_step(
             self, batch: Tuple[dict], batch_idx: int
