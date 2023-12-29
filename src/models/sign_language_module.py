@@ -3,10 +3,12 @@ from typing import Any, Dict, Tuple, Optional
 import datasets
 import torch
 from lightning import LightningModule
-from torch import nn
 from torch.utils.data import DataLoader
 from torchmetrics import MeanMetric, WordErrorRate, MinMetric
+from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast
+from transformers.modeling_outputs import Seq2SeqLMOutput
 
+from src.models.components.feature_extractor_dinov2 import SignLanguageFeatureExtractor
 from src.models.components.sign_language_net import SignLanguageNet
 
 
@@ -30,8 +32,16 @@ class SignLanguageLitModule(LightningModule):
         self.save_hyperparameters(logger=False)
 
         self.dataset: datasets.Dataset = None
-        self.net = SignLanguageNet()
-        self.criterion = nn.CTCLoss(blank=-100)
+        self.tokenizer = PreTrainedTokenizerFast(
+            pad_token="__PAD__",
+            bos_token="__ON__",
+            eos_token="__OFF__",
+            unk_token="__UNK__",
+            tokenizer_file="../etc/rwth_phoenix_tokenizer.json"
+        )
+        self.pre_processor = SignLanguageFeatureExtractor()
+        self.collator = DataCollatorForSeq2Seq(tokenizer=self.tokenizer, pad_to_multiple_of=16)
+        self.net = SignLanguageNet(tokenizer=self.tokenizer)
 
         # metric objects for calculating and averaging accuracy across batches
         self.train_wer = WordErrorRate()
@@ -49,16 +59,17 @@ class SignLanguageLitModule(LightningModule):
     def forward(
             self,
             input_values: torch.Tensor,
-            attention_mask: Optional[torch.Tensor] = None
-    ) -> torch.Tensor:
+            attention_mask: Optional[torch.Tensor] = None,
+            labels: Optional[torch.LongTensor] = None,
+    ) -> Seq2SeqLMOutput:
         """
         Perform a forward pass through the model `self.net`.
 
-        :param x: A tensor of images.
+        :param input_values: A tensor of images.
         :return: A tensor of logits.
         """
-        outputs = self.net(input_values=input_values, attention_mask=attention_mask)
-        return outputs.logits
+        outputs = self.net(input_values=input_values, attention_mask=attention_mask, labels=labels)
+        return outputs
 
     def on_train_start(self) -> None:
         """
@@ -67,8 +78,8 @@ class SignLanguageLitModule(LightningModule):
         # by default lightning executes validation step sanity checks before training starts,
         # so it's worth to make sure validation metrics don't store results from these checks
         self.val_loss.reset()
-        self.val_acc.reset()
-        self.val_acc_best.reset()
+        self.val_wer.reset()
+        self.val_wer_best.reset()
 
     def model_step(
             self, batch: Tuple[torch.Tensor, torch.Tensor]
@@ -83,14 +94,15 @@ class SignLanguageLitModule(LightningModule):
             - A tensor of predictions.
             - A tensor of target labels.
         """
-        x, y = batch
-        logits = self.forward(x)
-        loss = self.criterion(logits, y, input_lengths, target_lengths)
-        preds = torch.argmax(logits, dim=1)
-        return loss, preds, y
+        x, truth = batch
+
+        output = self.forward(x)
+        preds = torch.argmax(output.logits, dim=2)
+
+        return output.loss, preds, truth
 
     def training_step(
-            self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
+            self, batch: Tuple[dict], batch_idx: int
     ) -> torch.Tensor:
         """
         Perform a single training step on a batch of data from the training set.
@@ -100,11 +112,12 @@ class SignLanguageLitModule(LightningModule):
         :param batch_idx: The index of the current batch.
         :return: A tensor of losses between model predictions and targets.
         """
-        loss, preds, targets = self.model_step(batch)
+
+        loss, preds, truth = self.model_step(batch)
 
         # update and log metrics
         self.train_loss(loss)
-        self.train_acc(preds, targets)
+        self.train_wer(preds, truth)
         self.log("train/loss", self.train_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("train/acc", self.train_acc, on_step=False, on_epoch=True, prog_bar=True)
 
@@ -211,11 +224,24 @@ class SignLanguageLitModule(LightningModule):
         return {"optimizer": optimizer}
 
     def _load_dataset(self):
-        self.dataset = datasets.load_dataset('lukasbraach/rwth_phoenix_weather_2014', 'multisigner', streaming=True)
-        self.dataset.set_format(type="torch", columns=['frames', 'tokens'])
+        dataset = datasets.load_dataset(
+            'lukasbraach/rwth_phoenix_weather_2014',
+            'multisigner',
+            streaming=True,
+            num_proc=12
+        )
+        dataset.set_format(type="torch", columns=['frames', 'tokens'])
+
+        def map_dataset(batch):
+            feature = self.pre_processor(batch['frames'], sampling_rate=25, return_tensors="pt")
+            labels = self.tokenizer(batch['tokens'], is_split_into_words=True, truncation=True, padding='max_length')
+
+            return {'input_values': feature, 'labels': labels}
+
+        self.dataset = dataset.map(function=map_dataset, batched=False, num_proc=12)
 
     def train_dataloader(self):
-        return DataLoader(self.dataset['train'], shuffle=True, batch_size=8)
+        return DataLoader(self.dataset['train'], batch_size=1)
 
     def val_dataloader(self):
         return DataLoader(self.dataset['validation'], batch_size=4)
@@ -225,4 +251,4 @@ class SignLanguageLitModule(LightningModule):
 
 
 if __name__ == "__main__":
-    _ = SignLanguageLitModule(None, None, None, None)
+    _ = SignLanguageLitModule(None, None, None)
