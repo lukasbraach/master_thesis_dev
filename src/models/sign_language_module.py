@@ -1,14 +1,11 @@
 from typing import Any, Dict, Tuple, Optional
 
-import datasets
 import torch
 from lightning import LightningModule
-from torch.utils.data import DataLoader
 from torchmetrics import MeanMetric, WordErrorRate, MinMetric
 from transformers import DataCollatorForSeq2Seq, PreTrainedTokenizerFast
 from transformers.modeling_outputs import Seq2SeqLMOutput
 
-from src.models.components.feature_extractor_dinov2 import SignLanguageFeatureExtractor
 from src.models.components.sign_language_net import SignLanguageNet
 
 
@@ -31,8 +28,7 @@ class SignLanguageLitModule(LightningModule):
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
 
-        self.dataset: datasets.Dataset = None
-        self.tokenizer = PreTrainedTokenizerFast(
+        tokenizer = PreTrainedTokenizerFast(
             model_input_names=['input_values'],
             pad_token="__PAD__",
             bos_token="__ON__",
@@ -40,8 +36,7 @@ class SignLanguageLitModule(LightningModule):
             unk_token="__UNK__",
             tokenizer_file="../etc/rwth_phoenix_tokenizer.json"
         )
-        self.pre_processor = SignLanguageFeatureExtractor()
-        self.net = SignLanguageNet(tokenizer=self.tokenizer)
+        self.net = SignLanguageNet(tokenizer=tokenizer)
         self.collator = DataCollatorForSeq2Seq(
             model=self.net,
             tokenizer=self.tokenizer,
@@ -200,8 +195,6 @@ class SignLanguageLitModule(LightningModule):
 
         :param stage: Either `"fit"`, `"validate"`, `"test"`, or `"predict"`.
         """
-        self._load_dataset()
-
         if self.hparams.compile and stage == "fit":
             self.net = torch.compile(self.net)
 
@@ -228,32 +221,6 @@ class SignLanguageLitModule(LightningModule):
                 },
             }
         return {"optimizer": optimizer}
-
-    def _load_dataset(self):
-        dataset = datasets.load_dataset(
-            'lukasbraach/rwth_phoenix_weather_2014',
-            'multisigner',
-            streaming=True,
-            num_proc=12
-        )
-        dataset.set_format(type="torch", columns=['frames', 'tokens'])
-
-        def map_dataset(batch):
-            labels = self.tokenizer(batch['tokens'], is_split_into_words=True)
-            feature = self.pre_processor(batch['frames'], sampling_rate=25)
-
-            return {'input_values': feature.input_values[0], 'labels': labels.ids}
-
-        self.dataset = dataset.map(function=map_dataset, batched=False, remove_columns=['frames', 'tokens'])
-
-    def train_dataloader(self):
-        return DataLoader(self.dataset['train'], batch_size=1)
-
-    def val_dataloader(self):
-        return DataLoader(self.dataset['validation'], batch_size=4)
-
-    def test_dataloader(self):
-        return DataLoader(self.dataset['test'], batch_size=4)
 
 
 if __name__ == "__main__":

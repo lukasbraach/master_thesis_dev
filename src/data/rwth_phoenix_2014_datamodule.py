@@ -2,16 +2,18 @@ from typing import Any, Dict, Optional
 
 import datasets
 from lightning import LightningDataModule
-from torch.utils.data import DataLoader, Dataset
-from torchvision.transforms import transforms
+from torch.utils.data import DataLoader
+from transformers import PreTrainedTokenizerFast
+
+from src.models.components.feature_extractor_dinov2 import SignLanguageFeatureExtractor
 
 
 class RWTHPhoenix2014DataModule(LightningDataModule):
     def __init__(
             self,
-            batch_size: int = 8,
-            num_workers: int = 10,
-            streaming = True,
+            batch_size: int = 1,
+            num_workers: int = 12,
+            streaming=True,
     ) -> None:
         super().__init__()
 
@@ -19,13 +21,31 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
 
-        self.dataset = datasets.load_dataset('lukasbraach/rwth_phoenix_weather_2014', 'multisigner', streaming=streaming)
-
-        # data transformations
-        self.transforms = transforms.Compose(
-            [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
+        dataset = datasets.load_dataset(
+            'lukasbraach/rwth_phoenix_weather_2014',
+            'multisigner',
+            streaming=True,
+            num_proc=12
         )
+        dataset.set_format(type="torch", columns=['frames', 'tokens'])
 
+        tokenizer = PreTrainedTokenizerFast(
+            model_input_names=['input_values'],
+            pad_token="__PAD__",
+            bos_token="__ON__",
+            eos_token="__OFF__",
+            unk_token="__UNK__",
+            tokenizer_file="../etc/rwth_phoenix_tokenizer.json"
+        )
+        pre_processor = SignLanguageFeatureExtractor()
+
+        def map_dataset(batch):
+            labels = tokenizer(batch['tokens'], is_split_into_words=True)
+            feature = pre_processor(batch['frames'], sampling_rate=25)
+
+            return {'input_values': feature.input_values[0], 'labels': labels.ids}
+
+        self.dataset = dataset.map(function=map_dataset, batched=False, remove_columns=['frames', 'tokens'])
         self.batch_size_per_device = batch_size
 
     def prepare_data(self) -> None:

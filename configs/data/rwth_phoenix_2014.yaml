@@ -1,0 +1,4 @@
+_target_: src.data.rwth_phoenix_2014_datamodule.RWTHPhoenix2014DataModule
+batch_size: 1 # Needs to be divisible by the number of devices (e.g., if in a distributed setup)
+num_workers: 12
+pin_memory: False
