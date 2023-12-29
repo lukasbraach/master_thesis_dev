@@ -49,12 +49,12 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
     def __call__(
             self,
             raw_frames: Union[np.ndarray, List[np.ndarray], List[List[Image]]],
-            padding: Union[bool, str, PaddingStrategy] = 'longest',
+            padding: Union[bool, str, PaddingStrategy] = False,
             max_length: Optional[int] = None,
             truncation: bool = False,
             pad_to_multiple_of: Optional[int] = None,
-            return_attention_mask: Optional[bool] = True,
-            return_tensors: Optional[Union[str, TensorType]] = 'pt',
+            return_attention_mask: Optional[bool] = False,
+            return_tensors: Optional[Union[str, TensorType]] = None,
             sampling_rate: Optional[int] = None,
             **kwargs,
     ) -> BatchFeature:

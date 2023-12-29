@@ -40,8 +40,13 @@ class SignLanguageLitModule(LightningModule):
             tokenizer_file="../etc/rwth_phoenix_tokenizer.json"
         )
         self.pre_processor = SignLanguageFeatureExtractor()
-        self.collator = DataCollatorForSeq2Seq(tokenizer=self.tokenizer, pad_to_multiple_of=16)
         self.net = SignLanguageNet(tokenizer=self.tokenizer)
+        self.collator = DataCollatorForSeq2Seq(
+            model=self.net,
+            tokenizer=self.tokenizer,
+            pad_to_multiple_of=16,
+            return_tensors='pt'
+        )
 
         # metric objects for calculating and averaging accuracy across batches
         self.train_wer = WordErrorRate()
@@ -233,12 +238,12 @@ class SignLanguageLitModule(LightningModule):
         dataset.set_format(type="torch", columns=['frames', 'tokens'])
 
         def map_dataset(batch):
-            feature = self.pre_processor(batch['frames'], sampling_rate=25, return_tensors="pt")
-            labels = self.tokenizer(batch['tokens'], is_split_into_words=True, truncation=True, padding='max_length')
+            labels = self.tokenizer(batch['tokens'], is_split_into_words=True)
+            feature = self.pre_processor(batch['frames'], sampling_rate=25)
 
-            return {'input_values': feature, 'labels': labels}
+            return {'input_values': feature.input_values[0], 'labels': labels.ids}
 
-        self.dataset = dataset.map(function=map_dataset, batched=False, num_proc=12)
+        self.dataset = dataset.map(function=map_dataset, batched=False, remove_columns=['frames', 'tokens'])
 
     def train_dataloader(self):
         return DataLoader(self.dataset['train'], batch_size=1)
