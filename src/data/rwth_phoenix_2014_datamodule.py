@@ -36,8 +36,9 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
 
         self.collator = DataCollatorForSeq2Seq(
             tokenizer=self.tokenizer,
+            return_tensors='pt',
             pad_to_multiple_of=16,
-            return_tensors='pt'
+            padding=True,
         )
 
         self.dataset = datasets.load_dataset(
@@ -77,10 +78,11 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             self.batch_size_per_device = self.hparams.batch_size // self.trainer.world_size
 
     def _map_dataset(self, batch):
-        labels = self.tokenizer(batch['tokens'], is_split_into_words=True)
         feature = self.pre_processor(batch['frames'], sampling_rate=25)
+        result = {'input_values': feature.input_values, 'labels': batch['tokens']}
+        print(result)
 
-        return {'input_values': feature.input_values[0], 'labels': labels.ids}
+        return result
 
     def train_dataloader(self) -> DataLoader[Any]:
         """Create and return the train dataloader.
@@ -92,7 +94,8 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
         return DataLoader(
             dataset=subset.map(
                 function=self._map_dataset,
-                batched=False,
+                batched=True,
+                batch_size=1,
                 remove_columns=['frames', 'tokens']
             ),
             batch_size=self.batch_size_per_device,
@@ -111,7 +114,8 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
         return DataLoader(
             dataset=subset.map(
                 function=self._map_dataset,
-                batched=False,
+                batched=True,
+                batch_size=1,
                 remove_columns=['frames', 'tokens']
             ),
             batch_size=self.batch_size_per_device,
@@ -130,7 +134,8 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
         return DataLoader(
             dataset=subset.map(
                 function=self._map_dataset,
-                batched=False,
+                batched=True,
+                batch_size=1,
                 remove_columns=['frames', 'tokens']
             ),
             batch_size=self.batch_size_per_device,
