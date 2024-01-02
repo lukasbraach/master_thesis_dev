@@ -19,8 +19,6 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
     ) -> None:
         super().__init__()
 
-        print(f"SignLanguageNet tokenizer_file: {tokenizer_file}")
-
         # this line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)

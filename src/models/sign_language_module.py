@@ -5,15 +5,13 @@ from lightning import LightningModule
 from torchmetrics import MeanMetric, WordErrorRate, MinMetric
 from transformers.modeling_outputs import Seq2SeqLMOutput
 
-from src.models.components.sign_language_net import SignLanguageNet
-
 
 class SignLanguageLitModule(LightningModule):
     def __init__(
             self,
+            net: torch.nn.Module,
             optimizer: torch.optim.Optimizer,
             scheduler: torch.optim.lr_scheduler,
-            net: SignLanguageNet,
             compile: bool,
     ) -> None:
         """Initialize a `SignLanguageLitModule`.
@@ -26,7 +24,7 @@ class SignLanguageLitModule(LightningModule):
 
         # this line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
-        self.save_hyperparameters(logger=False)
+        self.save_hyperparameters(ignore=['net'], logger=False)
 
         self.net = net
 
@@ -104,7 +102,7 @@ class SignLanguageLitModule(LightningModule):
         self.train_loss(loss)
         self.train_wer(preds, truth)
         self.log("train/loss", self.train_loss, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("train/acc", self.train_acc, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("train/wer", self.train_wer, on_step=False, on_epoch=True, prog_bar=True)
 
         # return loss or backpropagation will fail
         return loss
@@ -125,20 +123,20 @@ class SignLanguageLitModule(LightningModule):
 
         # update and log metrics
         self.val_loss(loss)
-        self.val_acc(preds, targets)
+        self.val_wer(preds, targets)
         self.log("val/loss", self.val_loss, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("val/acc", self.val_acc, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val/wer", self.val_wer, on_step=False, on_epoch=True, prog_bar=True)
 
     def on_validation_epoch_end(self) -> None:
         """
         Lightning hook that is called when a validation epoch ends.
         :return:
         """
-        acc = self.val_acc.compute()  # get current val acc
-        self.val_acc_best(acc)  # update best so far val acc
+        wer = self.val_wer.compute()  # get current val acc
+        self.val_wer_best(wer)  # update best so far val acc
         # log `val_acc_best` as a value through `.compute()` method, instead of as a metric object
         # otherwise metric would be reset by lightning after each epoch
-        self.log("val/acc_best", self.val_acc_best.compute(), sync_dist=True, prog_bar=True)
+        self.log("val/wer_best", self.val_wer_best.compute(), sync_dist=True, prog_bar=True)
 
     def test_step(self, batch: dict, batch_idx: int) -> None:
         """
@@ -152,9 +150,9 @@ class SignLanguageLitModule(LightningModule):
 
         # update and log metrics
         self.test_loss(loss)
-        self.test_acc(preds, targets)
+        self.test_wer(preds, targets)
         self.log("test/loss", self.test_loss, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("test/acc", self.test_acc, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("test/wer", self.test_wer, on_step=False, on_epoch=True, prog_bar=True)
 
     def on_test_epoch_end(self) -> None:
         """Lightning hook that is called when a test epoch ends."""
