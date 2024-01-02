@@ -44,7 +44,11 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
         self.return_attention_mask = return_attention_mask
 
         self._image_processor = AutoImageProcessor.from_pretrained("facebook/dinov2-base")
-        self._spatial_encoder = Dinov2Model.from_pretrained("facebook/dinov2-base")
+        self._spatial_encoder = Dinov2Model.from_pretrained(
+            "facebook/dinov2-base",
+            torch_dtype="auto",
+            device_map="cuda:0"
+        )
 
     def __call__(
             self,

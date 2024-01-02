@@ -2,14 +2,17 @@ from typing import Any, Dict, Tuple, Optional
 
 import torch
 from lightning import LightningModule
-from torchmetrics import MeanMetric, WordErrorRate, MinMetric
+from torchmetrics import MeanMetric, MinMetric
+from torchmetrics.text import WordErrorRate
 from transformers.modeling_outputs import Seq2SeqLMOutput
+
+from src.models.components.sign_language_net import SignLanguageNet
 
 
 class SignLanguageLitModule(LightningModule):
     def __init__(
             self,
-            net: torch.nn.Module,
+            net: SignLanguageNet,
             optimizer: torch.optim.Optimizer,
             scheduler: torch.optim.lr_scheduler,
             compile: bool,
@@ -82,7 +85,10 @@ class SignLanguageLitModule(LightningModule):
         output = self.forward(**batch)
         preds = torch.argmax(output.logits, dim=2)
 
-        return output.loss, preds, batch["labels"]
+        truth_decoded = self.net.tokenizer.batch_decode(batch["labels"])
+        preds_decoded = self.net.tokenizer.batch_decode(preds)
+
+        return output.loss, preds_decoded, truth_decoded
 
     def training_step(
             self, batch: dict, batch_idx: int

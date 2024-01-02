@@ -23,28 +23,15 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
 
-        self.tokenizer = PreTrainedTokenizerFast(
-            model_input_names=['input_values'],
-            pad_token="__PAD__",
-            bos_token="__ON__",
-            eos_token="__OFF__",
-            unk_token="__UNK__",
-            tokenizer_file=tokenizer_file,
-        )
+        # initialized in setup function.
+        self.tokenizer: PreTrainedTokenizerFast = None
 
         self.pre_processor = SignLanguageFeatureExtractor()
-
-        self.collator = DataCollatorForSeq2Seq(
-            tokenizer=self.tokenizer,
-            return_tensors='pt',
-            pad_to_multiple_of=16,
-            padding=True,
-        )
-
         self.dataset = datasets.load_dataset(
             'lukasbraach/rwth_phoenix_weather_2014',
             'multisigner',
-            streaming=True
+            streaming=True,
+            trust_remote_code=True,
         )
 
         self.batch_size_per_device = batch_size
@@ -69,6 +56,16 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
 
         :param stage: The stage to setup. Either `"fit"`, `"validate"`, `"test"`, or `"predict"`. Defaults to ``None``.
         """
+        if self.tokenizer is None:
+            self.tokenizer = PreTrainedTokenizerFast(
+                model_input_names=['input_values'],
+                bos_token="__ON__",
+                eos_token="__OFF__",
+                unk_token="__UNK__",
+                pad_token="__PAD__",
+                tokenizer_file=self.hparams.tokenizer_file,
+            )
+
         # Divide batch size by the number of devices.
         if self.trainer is not None:
             if self.hparams.batch_size % self.trainer.world_size != 0:
@@ -78,9 +75,27 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             self.batch_size_per_device = self.hparams.batch_size // self.trainer.world_size
 
     def _map_dataset(self, batch):
-        feature = self.pre_processor(batch['frames'], sampling_rate=25)
-        result = {'input_values': feature.input_values, 'labels': batch['tokens']}
-        print(result)
+        labels = self.tokenizer(
+            batch['tokens'],
+            is_split_into_words=True,
+            padding=True,
+            pad_to_multiple_of=16,
+            return_tensors='pt',
+        )
+        feature = self.pre_processor(
+            batch['frames'],
+            sampling_rate=25,
+            padding=True,
+            pad_to_multiple_of=16,
+            return_attention_mask=True,
+            return_tensors='pt'
+        )
+
+        result = {
+            'input_values': feature.input_values,
+            'attention_mask': feature.attention_mask,
+            'labels': labels.input_ids
+        }
 
         return result
 
@@ -95,12 +110,11 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             dataset=subset.map(
                 function=self._map_dataset,
                 batched=True,
-                batch_size=1,
+                batch_size=self.batch_size_per_device,
                 remove_columns=['frames', 'tokens']
             ),
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
-            collate_fn=self.collator,
             shuffle=False,
         )
 
@@ -115,12 +129,11 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             dataset=subset.map(
                 function=self._map_dataset,
                 batched=True,
-                batch_size=1,
+                batch_size=self.batch_size_per_device,
                 remove_columns=['frames', 'tokens']
             ),
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
-            collate_fn=self.collator,
             shuffle=False,
         )
 
@@ -135,12 +148,11 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             dataset=subset.map(
                 function=self._map_dataset,
                 batched=True,
-                batch_size=1,
+                batch_size=self.batch_size_per_device,
                 remove_columns=['frames', 'tokens']
             ),
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
-            collate_fn=self.collator,
             shuffle=False,
         )
 

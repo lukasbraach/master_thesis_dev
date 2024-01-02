@@ -3,11 +3,6 @@ from transformers import SpeechEncoderDecoderModel, Speech2Text2Config, SpeechEn
 
 from src.models.components.language_decoder import LanguageDecoder
 from src.models.components.spatiotemporal_encoder import SpatiotemporalEncoder, SpatiotemporalEncoderConfig
-from transformers import SpeechEncoderDecoderModel, Speech2Text2Config, SpeechEncoderDecoderConfig, \
-    PreTrainedTokenizerFast
-
-from src.models.components.language_decoder import LanguageDecoder
-from src.models.components.spatiotemporal_encoder import SpatiotemporalEncoder, SpatiotemporalEncoderConfig
 
 
 class SignLanguageNet(SpeechEncoderDecoderModel):
@@ -20,7 +15,7 @@ class SignLanguageNet(SpeechEncoderDecoderModel):
     ) -> None:
         print(f"SignLanguageNet tokenizer_file: {tokenizer_file}")
 
-        tokenizer = PreTrainedTokenizerFast(
+        self.tokenizer = PreTrainedTokenizerFast(
             model_input_names=['input_values'],
             pad_token="__PAD__",
             bos_token="__ON__",
@@ -31,11 +26,11 @@ class SignLanguageNet(SpeechEncoderDecoderModel):
 
         encoder = SpatiotemporalEncoder(SpatiotemporalEncoderConfig())
         decoder = LanguageDecoder(Speech2Text2Config(
-            pad_token_id=tokenizer.pad_token_id,
-            bos_token_id=tokenizer.bos_token_id,
-            eos_token_id=tokenizer.eos_token_id,
-            decoder_start_token_id=tokenizer.eos_token_id,
-            vocab_size=tokenizer.vocab_size,
+            pad_token_id=self.tokenizer.pad_token_id,
+            bos_token_id=self.tokenizer.bos_token_id,
+            eos_token_id=self.tokenizer.eos_token_id,
+            decoder_start_token_id=self.tokenizer.eos_token_id,
+            vocab_size=self.tokenizer.vocab_size,
         ))
 
         config = SpeechEncoderDecoderConfig.from_encoder_decoder_configs(encoder.config, decoder.config)
