@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional
 import datasets
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader
-from transformers import PreTrainedTokenizerFast, DataCollatorForSeq2Seq
+from transformers import PreTrainedTokenizerFast
 
 from src.models.components.feature_extractor_dinov2 import SignLanguageFeatureExtractor
 
@@ -114,8 +114,11 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
                 remove_columns=['frames', 'tokens']
             ),
             batch_size=self.batch_size_per_device,
-            num_workers=self.hparams.num_workers,
             shuffle=False,
+            pin_memory=True,
+
+            # we use GPU
+            num_workers=0
         )
 
     def val_dataloader(self) -> DataLoader[Any]:
@@ -133,8 +136,11 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
                 remove_columns=['frames', 'tokens']
             ),
             batch_size=self.batch_size_per_device,
-            num_workers=self.hparams.num_workers,
             shuffle=False,
+            pin_memory=True,
+
+            # we use GPU
+            num_workers=0
         )
 
     def test_dataloader(self) -> DataLoader[Any]:
@@ -152,8 +158,11 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
                 remove_columns=['frames', 'tokens']
             ),
             batch_size=self.batch_size_per_device,
-            num_workers=self.hparams.num_workers,
             shuffle=False,
+            pin_memory=True,
+
+            # we use GPU
+            num_workers=0
         )
 
     def teardown(self, stage: Optional[str] = None) -> None:

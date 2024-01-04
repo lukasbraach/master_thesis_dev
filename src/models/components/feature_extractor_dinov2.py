@@ -133,11 +133,9 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
             x = [x]
 
         def extract(frame_batch):
-            processed = self._image_processor(images=frame_batch)
-            processed = np.array(processed['pixel_values'])
-            processed = torch.tensor(processed)
+            processed = self._image_processor(images=frame_batch, return_tensors='pt')
 
-            return processed
+            return processed['pixel_values'].to('cuda:0')
 
         x = [
             extract(frame_batch)
@@ -146,8 +144,8 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
 
         with torch.no_grad():
             x = [
-                self._spatial_encoder(feature_batch).pooler_output
-                for feature_batch in x
+                self._spatial_encoder(pixel_values).pooler_output
+                for pixel_values in x
             ]
 
         # convert into correct format for padding
