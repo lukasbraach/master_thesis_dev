@@ -1,10 +1,9 @@
 from typing import List, Union, Optional
 
 import numpy as np
-import torch
 from PIL.Image import Image
 from torch import TensorType
-from transformers import SequenceFeatureExtractor, BatchFeature, Dinov2Model, AutoImageProcessor
+from transformers import SequenceFeatureExtractor, BatchFeature, AutoImageProcessor
 from transformers.utils import PaddingStrategy, logging
 
 logger = logging.get_logger(__name__)
@@ -34,21 +33,19 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
 
     def __init__(
             self,
-            feature_size=768,
+            feature_size=(3, 224, 224),
             sampling_rate=25,
-            padding_value=0.0,
             return_attention_mask=False,
             **kwargs,
     ):
-        super().__init__(feature_size=feature_size, sampling_rate=sampling_rate, padding_value=padding_value, **kwargs)
+        super().__init__(
+            feature_size=1,
+            padding_value=np.zeros(feature_size),
+            sampling_rate=sampling_rate, **kwargs
+        )
         self.return_attention_mask = return_attention_mask
 
         self._image_processor = AutoImageProcessor.from_pretrained("facebook/dinov2-base")
-        self._spatial_encoder = Dinov2Model.from_pretrained(
-            "facebook/dinov2-base",
-            torch_dtype="auto",
-            device_map="cuda:0"
-        )
 
     def __call__(
             self,
@@ -133,23 +130,17 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
             x = [x]
 
         def extract(frame_batch):
-            processed = self._image_processor(images=frame_batch, return_tensors='pt')
+            processed = self._image_processor(images=frame_batch, return_tensors='np')
+            return processed['pixel_values']
 
-            return processed['pixel_values'].to('cuda:0')
-
+        print(f"I have to extract batch size {len(x)}")
         x = [
             extract(frame_batch)
             for frame_batch in x
         ]
 
-        with torch.no_grad():
-            x = [
-                self._spatial_encoder(pixel_values).pooler_output
-                for pixel_values in x
-            ]
-
         # convert into correct format for padding
-        encoded_inputs = BatchFeature({"input_values": x})
+        encoded_inputs = BatchFeature({"input_values": list(x)})
 
         padded_inputs = self.pad(
             encoded_inputs,

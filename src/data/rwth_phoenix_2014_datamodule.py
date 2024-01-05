@@ -11,7 +11,7 @@ from src.models.components.feature_extractor_dinov2 import SignLanguageFeatureEx
 class RWTHPhoenix2014DataModule(LightningDataModule):
     def __init__(
             self,
-            batch_size: int = 1,
+            batch_size: int = 12,
             num_workers: int = 12,
             streaming=True,
             pin_memory=False,
@@ -115,10 +115,7 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             ),
             batch_size=self.batch_size_per_device,
             shuffle=False,
-            pin_memory=True,
-
-            # we use GPU
-            num_workers=0
+            num_workers=self.hparams.num_workers,
         )
 
     def val_dataloader(self) -> DataLoader[Any]:
@@ -137,10 +134,7 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             ),
             batch_size=self.batch_size_per_device,
             shuffle=False,
-            pin_memory=True,
-
-            # we use GPU
-            num_workers=0
+            num_workers=self.hparams.num_workers,
         )
 
     def test_dataloader(self) -> DataLoader[Any]:
@@ -159,10 +153,7 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             ),
             batch_size=self.batch_size_per_device,
             shuffle=False,
-            pin_memory=True,
-
-            # we use GPU
-            num_workers=0
+            num_workers=self.hparams.num_workers,
         )
 
     def teardown(self, stage: Optional[str] = None) -> None:

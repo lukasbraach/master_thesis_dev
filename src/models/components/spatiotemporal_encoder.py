@@ -1,5 +1,6 @@
+import torch
 from torch import nn
-from transformers import AutoConfig, AutoModel, Wav2Vec2Config
+from transformers import AutoConfig, AutoModel, Wav2Vec2Config, Dinov2Model
 from transformers.models.wav2vec2.modeling_wav2vec2 import Wav2Vec2Model
 
 
@@ -30,9 +31,19 @@ class SpatialFeatureEncoder(nn.Module):
     def __init__(self, config: SpatiotemporalEncoderConfig):
         super().__init__()
 
-    @staticmethod
-    def forward(input_values):
-        return input_values.transpose(1, 2)
+        self._spatial_encoder = Dinov2Model.from_pretrained(
+            "facebook/dinov2-base",
+            torch_dtype="auto",
+            device_map="cuda:1"
+        )
+
+    def forward(self, pixel_values):
+        with torch.no_grad():
+            print(f"before: {x}")
+            x = self._spatial_encoder(pixel_values)['pooler_output']
+            print(f"after: {x}")
+
+        return x.transpose(1, 2)
 
 
 class SpatiotemporalFeatureProjection(nn.Module):
