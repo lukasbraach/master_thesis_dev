@@ -39,9 +39,17 @@ class SpatialFeatureEncoder(nn.Module):
 
     def forward(self, pixel_values):
         with torch.no_grad():
-            print(f"before: {x}")
-            x = self._spatial_encoder(pixel_values)['pooler_output']
-            print(f"after: {x}")
+            batch_size = pixel_values.shape[0]
+            seq_length = pixel_values.shape[1]
+            x = pixel_values.to("cuda:1")
+
+            # concatenate batch together
+            x = torch.reshape(x, (-1,) + x.shape[2:])
+            x = self._spatial_encoder(x)['pooler_output']
+
+            # expand batches
+            x = torch.reshape(x, (batch_size, seq_length) + x.shape[1:])
+            x = x.to("cuda:0")
 
         return x.transpose(1, 2)
 
