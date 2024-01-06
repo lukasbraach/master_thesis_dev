@@ -13,8 +13,6 @@ class SignLanguageNet(SpeechEncoderDecoderModel):
             self,
             tokenizer_file="../etc/rwth_phoenix_tokenizer.json",
     ) -> None:
-        print(f"SignLanguageNet tokenizer_file: {tokenizer_file}")
-
         self.tokenizer = PreTrainedTokenizerFast(
             model_input_names=['input_values'],
             pad_token="__PAD__",

@@ -10,8 +10,8 @@ class LanguageDecoder(Speech2Text2ForCausalLM):
         preset_config = Speech2Text2Config(
             d_model=1024,
             decoder_ffn_dim=2048,
-            decoder_layers=6,
-            decoder_attention_heads=8,
+            decoder_layers=12,
+            decoder_attention_heads=16,
         )
 
         if config is not None:

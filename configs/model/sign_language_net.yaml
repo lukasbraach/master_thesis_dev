@@ -3,8 +3,8 @@ _target_: src.models.sign_language_module.SignLanguageLitModule
 optimizer:
   _target_: torch.optim.Adam
   _partial_: true
-  lr: 0.001
-  weight_decay: 0.0
+  lr: 2e-5
+  weight_decay: 0.01
 
 scheduler:
   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
@@ -18,4 +18,4 @@ net:
   tokenizer_file: ${paths.root_dir}/src/etc/rwth_phoenix_tokenizer.json
 
 # compile model for faster training with pytorch 2.0
-compile: false
+compile: False

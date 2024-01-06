@@ -6,13 +6,12 @@ defaults:
   - default
 
 trainer:
-  max_epochs: 10
-  overfit_batches: 3
+  max_epochs: 30
+  overfit_batches: 10
   accelerator: gpu
 
-
 data:
-  num_workers: 0
+  num_workers: 32
   pin_memory: True
 
 

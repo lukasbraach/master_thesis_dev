@@ -11,7 +11,7 @@ from src.models.components.feature_extractor_dinov2 import SignLanguageFeatureEx
 class RWTHPhoenix2014DataModule(LightningDataModule):
     def __init__(
             self,
-            batch_size: int = 12,
+            batch_size: int = 8,
             num_workers: int = 12,
             streaming=True,
             pin_memory=False,

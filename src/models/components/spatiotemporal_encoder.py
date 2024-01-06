@@ -11,7 +11,7 @@ class SpatiotemporalEncoderConfig(Wav2Vec2Config):
                  hidden_size: int = 768,
                  dropout: float = 0.1,
                  num_attention_heads: int = 8,
-                 num_hidden_layers=6,
+                 num_hidden_layers=12,
                  mask_time_length=1,
                  **kwargs
                  ) -> None:
@@ -34,14 +34,14 @@ class SpatialFeatureEncoder(nn.Module):
         self._spatial_encoder = Dinov2Model.from_pretrained(
             "facebook/dinov2-base",
             torch_dtype="auto",
-            device_map="cuda:1"
         )
 
     def forward(self, pixel_values):
         with torch.no_grad():
             batch_size = pixel_values.shape[0]
             seq_length = pixel_values.shape[1]
-            x = pixel_values.to("cuda:1")
+
+            x = pixel_values
 
             # concatenate batch together
             x = torch.reshape(x, (-1,) + x.shape[2:])
@@ -49,7 +49,6 @@ class SpatialFeatureEncoder(nn.Module):
 
             # expand batches
             x = torch.reshape(x, (batch_size, seq_length) + x.shape[1:])
-            x = x.to("cuda:0")
 
         return x.transpose(1, 2)
 
