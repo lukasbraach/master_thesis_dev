@@ -7,21 +7,9 @@ class LanguageDecoder(Speech2Text2ForCausalLM):
             self,
             config: Speech2Text2Config = None
     ) -> None:
-        preset_config = Speech2Text2Config(
-            d_model=1024,
-            decoder_ffn_dim=2048,
-            decoder_layers=12,
-            decoder_attention_heads=16,
-        )
+        print(f"LanguageDecoder.__init__ config: {config}")
 
-        if config is not None:
-            preset_config.update(
-                config.to_diff_dict()
-            )
-
-        print(f"LanguageDecoder.__init__ config: {preset_config}")
-
-        super().__init__(preset_config)
+        super().__init__(config)
         print(f"LanguageDecoder.__init__ self: {self}")
 
 if __name__ == "__main__":
