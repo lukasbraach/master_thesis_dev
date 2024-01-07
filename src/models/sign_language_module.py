@@ -75,7 +75,7 @@ class SignLanguageLitModule(LightningModule):
 
     def model_step(
             self, batch: dict
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, list, list]:
         """
         Perform a single model step on a batch of data.
 
@@ -120,7 +120,7 @@ class SignLanguageLitModule(LightningModule):
             self.logger.log_text(
                 key="train/samples",
                 columns=["prediction", "targets"],
-                data=zip(preds, targets)
+                data=list(zip(preds, targets))
             )
 
         # return loss or backpropagation will fail
@@ -152,7 +152,7 @@ class SignLanguageLitModule(LightningModule):
             self.logger.log_text(
                 key="val/samples",
                 columns=["prediction", "targets"],
-                data=zip(preds, targets)
+                data=list(zip(preds, targets))
             )
 
     def on_validation_epoch_end(self) -> None:
@@ -186,7 +186,7 @@ class SignLanguageLitModule(LightningModule):
             self.logger.log_text(
                 key="test/samples",
                 columns=["prediction", "targets"],
-                data=zip(preds, targets)
+                data=list(zip(preds, targets))
             )
 
     def on_test_epoch_end(self) -> None:
