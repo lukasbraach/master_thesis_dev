@@ -27,11 +27,6 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
         self.tokenizer: PreTrainedTokenizerFast = None
 
         self.pre_processor = SignLanguageFeatureExtractor()
-        self.dataset = datasets.load_dataset(
-            'lukasbraach/rwth_phoenix_weather_2014',
-            'multisigner',
-            streaming=True,
-        )
 
         self.batch_size_per_device = batch_size
 
@@ -103,17 +98,21 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
 
         :return: The train dataloader.
         """
-        subset = self.dataset[datasets.Split.TRAIN]
+        subset = datasets.load_dataset(
+            'lukasbraach/rwth_phoenix_weather_2014',
+            'multisigner',
+            streaming=True,
+            split=datasets.Split.TRAIN
+        ).map(
+            function=self._map_dataset,
+            batched=True,
+            batch_size=self.batch_size_per_device,
+            remove_columns=['frames', 'tokens']
+        )
 
         return DataLoader(
-            dataset=subset.map(
-                function=self._map_dataset,
-                batched=True,
-                batch_size=self.batch_size_per_device,
-                remove_columns=['frames', 'tokens']
-            ),
+            dataset=subset,
             batch_size=self.batch_size_per_device,
-            shuffle=False,
             num_workers=self.hparams.num_workers,
         )
 
@@ -122,17 +121,21 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
 
         :return: The validation dataloader.
         """
-        subset = self.dataset[datasets.Split.VALIDATION]
+        subset = datasets.load_dataset(
+            'lukasbraach/rwth_phoenix_weather_2014',
+            'multisigner',
+            streaming=True,
+            split=datasets.Split.VALIDATION,
+        ).map(
+            function=self._map_dataset,
+            batched=True,
+            batch_size=self.batch_size_per_device,
+            remove_columns=['frames', 'tokens']
+        )
 
         return DataLoader(
-            dataset=subset.map(
-                function=self._map_dataset,
-                batched=True,
-                batch_size=self.batch_size_per_device,
-                remove_columns=['frames', 'tokens']
-            ),
+            dataset=subset,
             batch_size=self.batch_size_per_device,
-            shuffle=False,
             num_workers=self.hparams.num_workers,
         )
 
@@ -141,17 +144,21 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
 
         :return: The test dataloader.
         """
-        subset = self.dataset[datasets.Split.TEST]
+        subset = datasets.load_dataset(
+            'lukasbraach/rwth_phoenix_weather_2014',
+            'multisigner',
+            streaming=True,
+            split=datasets.Split.TEST,
+        ).map(
+            function=self._map_dataset,
+            batched=True,
+            batch_size=self.batch_size_per_device,
+            remove_columns=['frames', 'tokens']
+        )
 
         return DataLoader(
-            dataset=subset.map(
-                function=self._map_dataset,
-                batched=True,
-                batch_size=self.batch_size_per_device,
-                remove_columns=['frames', 'tokens']
-            ),
+            dataset=subset,
             batch_size=self.batch_size_per_device,
-            shuffle=False,
             num_workers=self.hparams.num_workers,
         )
 
