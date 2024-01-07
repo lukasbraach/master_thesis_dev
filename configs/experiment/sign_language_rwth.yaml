@@ -17,7 +17,7 @@ tags: ["sign_language", "rwth_phoenix"]
 seed: 12345
 
 trainer:
-  min_epochs: 10
+  min_epochs: 3
   max_epochs: 30
   gradient_clip_val: 0.5
   accelerator: gpu
@@ -38,5 +38,5 @@ callbacks:
 
   early_stopping:
     monitor: "val/wer"
-    patience: 100
+    patience: 2
     mode: "min"
