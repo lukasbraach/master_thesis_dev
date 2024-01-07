@@ -30,6 +30,7 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
         self.dataset = datasets.load_dataset(
             'lukasbraach/rwth_phoenix_weather_2014',
             'multisigner',
+            streaming=True,
         )
 
         self.batch_size_per_device = batch_size
