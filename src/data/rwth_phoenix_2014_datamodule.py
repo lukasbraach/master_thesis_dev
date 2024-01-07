@@ -94,6 +94,8 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             'labels': labels.input_ids
         }
 
+        print(f"Tokens: {batch['tokens']}")
+
         return result
 
     def train_dataloader(self) -> DataLoader[Any]:
