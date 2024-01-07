@@ -11,7 +11,7 @@ from src.models.components.feature_extractor_dinov2 import SignLanguageFeatureEx
 class RWTHPhoenix2014DataModule(LightningDataModule):
     def __init__(
             self,
-            batch_size: int = 8,
+            batch_size: int = 1,
             num_workers: int = 12,
             streaming=True,
             pin_memory=False,
@@ -77,15 +77,13 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
         labels = self.tokenizer(
             batch['tokens'],
             is_split_into_words=True,
-            padding=True,
-            pad_to_multiple_of=16,
+            padding=False,
             return_tensors='pt',
         )
         feature = self.pre_processor(
             batch['frames'],
             sampling_rate=25,
-            padding=True,
-            pad_to_multiple_of=16,
+            padding=False,
             return_attention_mask=True,
             return_tensors='pt'
         )

@@ -19,8 +19,10 @@ class LanguageDecoder(Speech2Text2ForCausalLM):
                 config.to_diff_dict()
             )
 
-        super().__init__(preset_config)
+        print(f"LanguageDecoder.__init__ config: {preset_config}")
 
+        super().__init__(preset_config)
+        print(f"LanguageDecoder.__init__ self: {self}")
 
 if __name__ == "__main__":
     _ = LanguageDecoder()
