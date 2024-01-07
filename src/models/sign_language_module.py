@@ -1,7 +1,9 @@
 from typing import Any, Dict, Tuple, Optional
 
 import torch
+import wandb
 from lightning import LightningModule
+from lightning.pytorch.loggers import WandbLogger
 from torchmetrics import MeanMetric, MinMetric
 from torchmetrics.text import WordErrorRate
 from transformers.modeling_outputs import Seq2SeqLMOutput
@@ -69,6 +71,8 @@ class SignLanguageLitModule(LightningModule):
         self.val_wer.reset()
         self.val_wer_best.reset()
 
+        wandb.watch(self.net, log="all")
+
     def model_step(
             self, batch: dict
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -102,13 +106,22 @@ class SignLanguageLitModule(LightningModule):
         :return: A tensor of losses between model predictions and targets.
         """
 
-        loss, preds, truth = self.model_step(batch)
+        loss, preds, targets = self.model_step(batch)
 
         # update and log metrics
         self.train_loss(loss)
-        self.train_wer(preds, truth)
+        self.train_wer(preds, targets)
+
+        self.log("train/batch_idx", batch_idx, on_step=True, prog_bar=True)
         self.log("train/loss", self.train_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("train/wer", self.train_wer, on_step=False, on_epoch=True, prog_bar=True)
+
+        if isinstance(self.logger, WandbLogger):
+            self.logger.log_text(
+                key="train/samples",
+                columns=["prediction", "targets"],
+                data=zip(preds, targets)
+            )
 
         # return loss or backpropagation will fail
         return loss
@@ -130,8 +143,17 @@ class SignLanguageLitModule(LightningModule):
         # update and log metrics
         self.val_loss(loss)
         self.val_wer(preds, targets)
+
+        self.log("val/batch_idx", batch_idx, on_step=True, prog_bar=True)
         self.log("val/loss", self.val_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("val/wer", self.val_wer, on_step=False, on_epoch=True, prog_bar=True)
+
+        if isinstance(self.logger, WandbLogger):
+            self.logger.log_text(
+                key="val/samples",
+                columns=["prediction", "targets"],
+                data=zip(preds, targets)
+            )
 
     def on_validation_epoch_end(self) -> None:
         """
@@ -159,6 +181,13 @@ class SignLanguageLitModule(LightningModule):
         self.test_wer(preds, targets)
         self.log("test/loss", self.test_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("test/wer", self.test_wer, on_step=False, on_epoch=True, prog_bar=True)
+
+        if isinstance(self.logger, WandbLogger):
+            self.logger.log_text(
+                key="test/samples",
+                columns=["prediction", "targets"],
+                data=zip(preds, targets)
+            )
 
     def on_test_epoch_end(self) -> None:
         """Lightning hook that is called when a test epoch ends."""
