@@ -116,6 +116,12 @@ class SignLanguageLitModule(LightningModule):
         self.log("train/loss", self.train_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("train/wer", self.train_wer, on_step=False, on_epoch=True, prog_bar=True)
 
+        print_dict = {
+            "predictions": preds,
+            "targets": targets,
+        }
+        print(f"\nTrain: {print_dict}")
+
         if isinstance(self.logger, WandbLogger):
             self.logger.log_text(
                 key="train/samples",
@@ -147,6 +153,12 @@ class SignLanguageLitModule(LightningModule):
         self.log("val/batch_idx", batch_idx, on_step=True, prog_bar=True)
         self.log("val/loss", self.val_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("val/wer", self.val_wer, on_step=False, on_epoch=True, prog_bar=True)
+
+        print_dict = {
+            "predictions": preds,
+            "targets": targets,
+        }
+        print(f"\nValidation: {print_dict}")
 
         if isinstance(self.logger, WandbLogger):
             self.logger.log_text(
