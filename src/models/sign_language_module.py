@@ -1,3 +1,4 @@
+import json
 from typing import Any, Dict, Tuple, Optional
 
 import torch
@@ -43,6 +44,11 @@ class SignLanguageLitModule(LightningModule):
         self.val_loss = MeanMetric()
         self.test_loss = MeanMetric()
 
+        # initialized elsewhere
+        self.train_samples = None
+        self.val_samples = None
+        self.test_samples = None
+
         # for tracking best so far validation accuracy
         self.val_wer_best = MinMetric()
 
@@ -51,6 +57,7 @@ class SignLanguageLitModule(LightningModule):
             input_values: torch.Tensor,
             attention_mask: Optional[torch.Tensor] = None,
             labels: Optional[torch.LongTensor] = None,
+            **kwargs,
     ) -> Seq2SeqLMOutput:
         """
         Perform a forward pass through the model `self.net`.
@@ -71,7 +78,12 @@ class SignLanguageLitModule(LightningModule):
         self.val_wer.reset()
         self.val_wer_best.reset()
 
-        wandb.watch(self.net, log="all")
+        if isinstance(self.logger, WandbLogger):
+            self.train_samples = wandb.Table(columns=["prediction", "targets"])
+            self.val_samples = wandb.Table(columns=["prediction", "targets"])
+            self.test_samples = wandb.Table(columns=["prediction", "targets"])
+
+            wandb.watch(self.net, log="all")
 
     def model_step(
             self, batch: dict
@@ -120,14 +132,13 @@ class SignLanguageLitModule(LightningModule):
             "predictions": preds,
             "targets": targets,
         }
-        print(f"\nTrain: {print_dict}")
+        print(f"\nTrain: {json.dumps(print_dict, indent=4)}")
 
-        if isinstance(self.logger, WandbLogger):
-            self.logger.log_text(
-                key="train/samples",
-                columns=["prediction", "targets"],
-                data=list(zip(preds, targets))
-            )
+        if self.train_samples is not None:
+            for col in zip(preds, targets):
+                self.train_samples.add_data(*col)
+
+            self.log("train/samples", self.train_samples)
 
         # return loss or backpropagation will fail
         return loss
@@ -158,14 +169,13 @@ class SignLanguageLitModule(LightningModule):
             "predictions": preds,
             "targets": targets,
         }
-        print(f"\nValidation: {print_dict}")
+        print(f"\nValidation: {json.dumps(print_dict, indent=4)}")
 
-        if isinstance(self.logger, WandbLogger):
-            self.logger.log_text(
-                key="val/samples",
-                columns=["prediction", "targets"],
-                data=list(zip(preds, targets))
-            )
+        if self.val_samples is not None:
+            for col in zip(preds, targets):
+                self.val_samples.add_data(*col)
+
+            self.log("val/samples", self.val_samples)
 
     def on_validation_epoch_end(self) -> None:
         """
@@ -194,12 +204,11 @@ class SignLanguageLitModule(LightningModule):
         self.log("test/loss", self.test_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("test/wer", self.test_wer, on_step=False, on_epoch=True, prog_bar=True)
 
-        if isinstance(self.logger, WandbLogger):
-            self.logger.log_text(
-                key="test/samples",
-                columns=["prediction", "targets"],
-                data=list(zip(preds, targets))
-            )
+        if self.test_samples is not None:
+            for col in zip(preds, targets):
+                self.test_samples.add_data(*col)
+
+            self.log("test/samples", self.test_samples, on_step=True)
 
     def on_test_epoch_end(self) -> None:
         """Lightning hook that is called when a test epoch ends."""

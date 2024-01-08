@@ -1,9 +1,12 @@
 from typing import Any, Dict, Optional
 
 import datasets
+import torch
+from datasets import IterableDataset
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader
 from transformers import PreTrainedTokenizerFast
+from transformers.trainer_pt_utils import IterableDatasetShard
 
 from src.models.components.feature_extractor_dinov2 import SignLanguageFeatureExtractor
 
@@ -22,6 +25,13 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
         # this line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
+
+        self.dataset = datasets.load_dataset(
+            'lukasbraach/rwth_phoenix_weather_2014',
+            'multisigner',
+            streaming=True,
+            trust_remote_code=True,
+        )
 
         # initialized in setup function.
         self.tokenizer: PreTrainedTokenizerFast = None
@@ -89,78 +99,63 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             'labels': labels.input_ids
         }
 
-        print(f"Tokens: {batch['tokens']}")
-
         return result
+
+    def _instantiate_data_loader(self, dataset: IterableDataset) -> DataLoader:
+        dataset = dataset.map(
+            function=self._map_dataset,
+            batched=True,
+            batch_size=1,
+            remove_columns=['frames']
+        )
+
+        dataset = IterableDatasetShard(
+            dataset=dataset,
+            batch_size=self.batch_size_per_device,
+            num_processes=self.hparams.num_workers,
+        )
+
+        def worker_init_fn(worker_id):
+            worker_info = torch.utils.data.get_worker_info()
+            worker_info.dataset.process_index = worker_id
+
+        data_loader = DataLoader(
+            dataset=dataset,
+            batch_size=self.batch_size_per_device,
+            num_workers=self.hparams.num_workers,
+            worker_init_fn=worker_init_fn,
+            persistent_workers=True if self.hparams.num_workers > 1 else None,
+            prefetch_factor=3 if self.hparams.num_workers > 1 else None,
+        )
+
+        return data_loader
 
     def train_dataloader(self) -> DataLoader[Any]:
         """Create and return the train dataloader.
 
         :return: The train dataloader.
         """
-        subset = datasets.load_dataset(
-            'lukasbraach/rwth_phoenix_weather_2014',
-            'multisigner',
-            streaming=True,
-            split=datasets.Split.TRAIN
-        ).map(
-            function=self._map_dataset,
-            batched=True,
-            batch_size=self.batch_size_per_device,
-            remove_columns=['frames', 'tokens']
-        )
+        subset = self.dataset[datasets.Split.TRAIN]
 
-        return DataLoader(
-            dataset=subset,
-            batch_size=self.batch_size_per_device,
-            num_workers=self.hparams.num_workers,
-        )
+        return self._instantiate_data_loader(subset)
 
     def val_dataloader(self) -> DataLoader[Any]:
         """Create and return the validation dataloader.
 
         :return: The validation dataloader.
         """
-        subset = datasets.load_dataset(
-            'lukasbraach/rwth_phoenix_weather_2014',
-            'multisigner',
-            streaming=True,
-            split=datasets.Split.VALIDATION,
-        ).map(
-            function=self._map_dataset,
-            batched=True,
-            batch_size=self.batch_size_per_device,
-            remove_columns=['frames', 'tokens']
-        )
+        subset = self.dataset[datasets.Split.VALIDATION]
 
-        return DataLoader(
-            dataset=subset,
-            batch_size=self.batch_size_per_device,
-            num_workers=self.hparams.num_workers,
-        )
+        return self._instantiate_data_loader(subset)
 
     def test_dataloader(self) -> DataLoader[Any]:
         """Create and return the test dataloader.
 
         :return: The test dataloader.
         """
-        subset = datasets.load_dataset(
-            'lukasbraach/rwth_phoenix_weather_2014',
-            'multisigner',
-            streaming=True,
-            split=datasets.Split.TEST,
-        ).map(
-            function=self._map_dataset,
-            batched=True,
-            batch_size=self.batch_size_per_device,
-            remove_columns=['frames', 'tokens']
-        )
+        subset = self.dataset[datasets.Split.TEST]
 
-        return DataLoader(
-            dataset=subset,
-            batch_size=self.batch_size_per_device,
-            num_workers=self.hparams.num_workers,
-        )
+        return self._instantiate_data_loader(subset)
 
     def teardown(self, stage: Optional[str] = None) -> None:
         """Lightning hook for cleaning up after `trainer.fit()`, `trainer.validate()`,
