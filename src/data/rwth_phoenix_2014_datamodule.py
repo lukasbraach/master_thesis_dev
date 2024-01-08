@@ -18,6 +18,7 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             num_workers: int = 12,
             streaming=True,
             pin_memory=False,
+            variant='multisigner',
             tokenizer_file="../etc/rwth_phoenix_tokenizer.json"
     ) -> None:
         super().__init__()
@@ -28,7 +29,7 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
 
         self.dataset = datasets.load_dataset(
             'lukasbraach/rwth_phoenix_weather_2014',
-            'multisigner',
+            variant,
             streaming=True,
             trust_remote_code=True,
         )
@@ -85,6 +86,13 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             padding=False,
             return_tensors='pt',
         )
+
+        if self.hparams.variant == 'pre-training':
+            return {
+                'labels': labels.input_ids,
+                'tokens': batch['tokens'],
+            }
+
         feature = self.pre_processor(
             batch['frames'],
             sampling_rate=25,
@@ -96,25 +104,27 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
         result = {
             'input_values': feature.input_values,
             'attention_mask': feature.attention_mask,
-            'labels': labels.input_ids
+            'labels': labels.input_ids,
+            'tokens': batch['tokens'],
         }
 
         return result
 
     def _instantiate_data_loader(self, dataset: IterableDataset) -> DataLoader:
+        dataset = dataset.with_format("torch")
         dataset = dataset.map(
             function=self._map_dataset,
             batched=True,
             batch_size=1,
-            remove_columns=['frames']
+            remove_columns=['frames'] if self.hparams.variant != 'pre-training' else None,
         )
 
-        dataset = IterableDatasetShard(
-            dataset=dataset,
-            batch_size=self.batch_size_per_device,
-            num_processes=self.hparams.num_workers,
-        )
-
+        # dataset = IterableDatasetShard(
+        #     dataset=dataset,
+        #     batch_size=self.batch_size_per_device,
+        #     num_processes=self.hparams.num_workers,
+        # )
+        #
         def worker_init_fn(worker_id):
             worker_info = torch.utils.data.get_worker_info()
             worker_info.dataset.process_index = worker_id
@@ -124,7 +134,6 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
             worker_init_fn=worker_init_fn,
-            persistent_workers=True if self.hparams.num_workers > 1 else None,
             prefetch_factor=3 if self.hparams.num_workers > 1 else None,
         )
 

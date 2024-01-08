@@ -128,23 +128,18 @@ class SignLanguageLitModule(LightningModule):
         self.log("train/loss", self.train_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("train/wer", self.train_wer, on_step=False, on_epoch=True, prog_bar=True)
 
-        print_dict = {
-            "predictions": preds,
-            "targets": targets,
-        }
-        print(f"\nTrain: {json.dumps(print_dict, indent=4)}")
-
         if self.train_samples is not None:
             for col in zip(preds, targets):
                 self.train_samples.add_data(*col)
-
-            self.log("train/samples", self.train_samples)
 
         # return loss or backpropagation will fail
         return loss
 
     def on_train_epoch_end(self) -> None:
         "Lightning hook that is called when a training epoch ends."
+        if self.train_samples is not None:
+            wandb.log({"train/samples": self.train_samples})
+
         pass
 
     def validation_step(self, batch: dict, batch_idx: int) -> None:
@@ -165,17 +160,9 @@ class SignLanguageLitModule(LightningModule):
         self.log("val/loss", self.val_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("val/wer", self.val_wer, on_step=False, on_epoch=True, prog_bar=True)
 
-        print_dict = {
-            "predictions": preds,
-            "targets": targets,
-        }
-        print(f"\nValidation: {json.dumps(print_dict, indent=4)}")
-
         if self.val_samples is not None:
             for col in zip(preds, targets):
                 self.val_samples.add_data(*col)
-
-            self.log("val/samples", self.val_samples)
 
     def on_validation_epoch_end(self) -> None:
         """
@@ -187,6 +174,9 @@ class SignLanguageLitModule(LightningModule):
         # log `val_acc_best` as a value through `.compute()` method, instead of as a metric object
         # otherwise metric would be reset by lightning after each epoch
         self.log("val/wer_best", self.val_wer_best.compute(), sync_dist=True, prog_bar=True)
+
+        if self.val_samples is not None:
+            wandb.log({"val/samples": self.val_samples})
 
     def test_step(self, batch: dict, batch_idx: int) -> None:
         """
@@ -208,10 +198,11 @@ class SignLanguageLitModule(LightningModule):
             for col in zip(preds, targets):
                 self.test_samples.add_data(*col)
 
-            self.log("test/samples", self.test_samples, on_step=True)
-
     def on_test_epoch_end(self) -> None:
         """Lightning hook that is called when a test epoch ends."""
+        if self.test_samples is not None:
+            wandb.log({"test/samples": self.test_samples})
+
         pass
 
     def prepare_data(self) -> None:
