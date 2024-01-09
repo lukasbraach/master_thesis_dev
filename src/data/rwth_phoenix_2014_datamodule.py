@@ -77,35 +77,33 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
 
     def _map_dataset(self, batch):
         transcription = batch['transcription']
-        example_id = batch['id']
 
         labels = self.tokenizer(
             transcription,
             is_split_into_words=True,
-            padding=False,
+            padding=self.batch_size_per_device > 1,
+            pad_to_multiple_of=16 if self.batch_size_per_device > 1 else None,
             return_tensors='pt',
         )
 
         if self.hparams.variant == 'pre-training':
             return {
                 'labels': labels.input_ids,
-                'transcription': transcription,
             }
 
         feature = self.pre_processor(
             batch['frames'],
             sampling_rate=25,
-            padding=False,
+            padding=self.batch_size_per_device > 1,
+            pad_to_multiple_of=16 if self.batch_size_per_device > 1 else None,
             return_attention_mask=True,
             return_tensors='pt'
         )
 
         result = {
-            'example_id': example_id,
             'input_values': feature.input_values,
             'attention_mask': feature.attention_mask,
             'labels': labels.input_ids,
-            'tokens': transcription,
         }
 
         return result
