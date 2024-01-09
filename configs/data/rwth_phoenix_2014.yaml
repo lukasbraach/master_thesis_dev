@@ -1,5 +1,5 @@
 _target_: src.data.rwth_phoenix_2014_datamodule.RWTHPhoenix2014DataModule
-batch_size: 1 # Needs to be divisible by the number of devices (e.g., if in a distributed setup)
-num_workers: 16
+batch_size: 2 # Needs to be divisible by the number of devices (e.g., if in a distributed setup)
+num_workers: 24
 pin_memory: True
-tokenizer_file: ${paths.root_dir}/src/etc/rwth_phoenix_tokenizer.json
+tokenizer_file: ${paths.root_dir}/src/etc/rwth_phoenix_tokenizer_wordlevel.json

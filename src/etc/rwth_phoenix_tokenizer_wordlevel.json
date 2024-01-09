@@ -22,16 +22,7 @@
       "special": true
     },
     {
-      "id": 2,
-      "content": "__ON__",
-      "single_word": false,
-      "lstrip": false,
-      "rstrip": false,
-      "normalized": false,
-      "special": true
-    },
-    {
-      "id": 3,
+      "id": 7,
       "content": "__OFF__",
       "single_word": false,
       "lstrip": false,
@@ -40,7 +31,16 @@
       "special": true
     },
     {
-      "id": 4,
+      "id": 8,
+      "content": "__ON__",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    },
+    {
+      "id": 18,
       "content": "__EMOTION__",
       "single_word": false,
       "lstrip": false,
@@ -49,7 +49,7 @@
       "special": true
     },
     {
-      "id": 5,
+      "id": 26,
       "content": "__PU__",
       "single_word": false,
       "lstrip": false,

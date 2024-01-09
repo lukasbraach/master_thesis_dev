@@ -1,4 +1,3 @@
-import json
 from typing import Any, Dict, Tuple, Optional
 
 import torch
@@ -123,6 +122,10 @@ class SignLanguageLitModule(LightningModule):
         # update and log metrics
         self.train_loss(loss)
         self.train_wer(preds, targets)
+
+        # print()
+        # print(f"TRAIN pred: {preds}")
+        # print(f"TRAIN tru:  {targets}")
 
         self.log("train/batch_idx", batch_idx, on_step=True, prog_bar=True)
         self.log("train/loss", self.train_loss, on_step=False, on_epoch=True, prog_bar=True)

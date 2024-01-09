@@ -1,12 +1,10 @@
 from typing import Any, Dict, Optional
 
 import datasets
-import torch
 from datasets import IterableDataset
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader
 from transformers import PreTrainedTokenizerFast
-from transformers.trainer_pt_utils import IterableDatasetShard
 
 from src.models.components.feature_extractor_dinov2 import SignLanguageFeatureExtractor
 
@@ -15,7 +13,7 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
     def __init__(
             self,
             batch_size: int = 1,
-            num_workers: int = 12,
+            num_workers: int = 24,
             streaming=True,
             pin_memory=False,
             variant='multisigner',
@@ -27,17 +25,15 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
 
+        # initialized in setup function.
+        self.tokenizer: PreTrainedTokenizerFast = None
+        self.pre_processor = SignLanguageFeatureExtractor()
         self.dataset = datasets.load_dataset(
             'lukasbraach/rwth_phoenix_weather_2014',
             variant,
             streaming=True,
             trust_remote_code=True,
         )
-
-        # initialized in setup function.
-        self.tokenizer: PreTrainedTokenizerFast = None
-
-        self.pre_processor = SignLanguageFeatureExtractor()
 
         self.batch_size_per_device = batch_size
 
@@ -80,8 +76,11 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             self.batch_size_per_device = self.hparams.batch_size // self.trainer.world_size
 
     def _map_dataset(self, batch):
+        transcription = batch['transcription']
+        example_id = batch['id']
+
         labels = self.tokenizer(
-            batch['tokens'],
+            transcription,
             is_split_into_words=True,
             padding=False,
             return_tensors='pt',
@@ -90,7 +89,7 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
         if self.hparams.variant == 'pre-training':
             return {
                 'labels': labels.input_ids,
-                'tokens': batch['tokens'],
+                'transcription': transcription,
             }
 
         feature = self.pre_processor(
@@ -102,39 +101,28 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
         )
 
         result = {
+            'example_id': example_id,
             'input_values': feature.input_values,
             'attention_mask': feature.attention_mask,
             'labels': labels.input_ids,
-            'tokens': batch['tokens'],
+            'tokens': transcription,
         }
 
         return result
 
     def _instantiate_data_loader(self, dataset: IterableDataset) -> DataLoader:
-        dataset = dataset.with_format("torch")
         dataset = dataset.map(
             function=self._map_dataset,
             batched=True,
-            batch_size=1,
+            batch_size=self.batch_size_per_device,
             remove_columns=['frames'] if self.hparams.variant != 'pre-training' else None,
         )
-
-        # dataset = IterableDatasetShard(
-        #     dataset=dataset,
-        #     batch_size=self.batch_size_per_device,
-        #     num_processes=self.hparams.num_workers,
-        # )
-        #
-        def worker_init_fn(worker_id):
-            worker_info = torch.utils.data.get_worker_info()
-            worker_info.dataset.process_index = worker_id
 
         data_loader = DataLoader(
             dataset=dataset,
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
-            worker_init_fn=worker_init_fn,
-            prefetch_factor=3 if self.hparams.num_workers > 1 else None,
+            prefetch_factor=3,
         )
 
         return data_loader
