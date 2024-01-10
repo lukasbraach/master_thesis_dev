@@ -1,10 +1,10 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 import datasets
 from datasets import IterableDataset
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader
-from transformers import PreTrainedTokenizerFast
+from transformers import PreTrainedTokenizerFast, PreTrainedTokenizer
 
 from src.models.components.feature_extractor_dinov2 import SignLanguageFeatureExtractor
 
@@ -12,12 +12,12 @@ from src.models.components.feature_extractor_dinov2 import SignLanguageFeatureEx
 class RWTHPhoenix2014DataModule(LightningDataModule):
     def __init__(
             self,
+            tokenizer: Union[PreTrainedTokenizer, PreTrainedTokenizerFast],
             batch_size: int = 1,
             num_workers: int = 24,
             streaming=True,
             pin_memory=False,
             variant='multisigner',
-            tokenizer_file="../etc/rwth_phoenix_tokenizer.json"
     ) -> None:
         super().__init__()
 
@@ -26,8 +26,8 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
         self.save_hyperparameters(logger=False)
 
         # initialized in setup function.
-        self.tokenizer: PreTrainedTokenizerFast = None
         self.pre_processor = SignLanguageFeatureExtractor()
+        self.tokenizer = tokenizer
         self.dataset = datasets.load_dataset(
             'lukasbraach/rwth_phoenix_weather_2014',
             variant,
@@ -57,15 +57,6 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
 
         :param stage: The stage to setup. Either `"fit"`, `"validate"`, `"test"`, or `"predict"`. Defaults to ``None``.
         """
-        if self.tokenizer is None:
-            self.tokenizer = PreTrainedTokenizerFast(
-                model_input_names=['input_values'],
-                bos_token="__ON__",
-                eos_token="__OFF__",
-                unk_token="__UNK__",
-                pad_token="__PAD__",
-                tokenizer_file=self.hparams.tokenizer_file,
-            )
 
         # Divide batch size by the number of devices.
         if self.trainer is not None:
@@ -80,10 +71,9 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
 
         labels = self.tokenizer(
             transcription,
-            is_split_into_words=True,
             padding=self.batch_size_per_device > 1,
-            pad_to_multiple_of=16 if self.batch_size_per_device > 1 else None,
             return_tensors='pt',
+            return_length=True,
         )
 
         if self.hparams.variant == 'pre-training':
@@ -95,7 +85,6 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             batch['frames'],
             sampling_rate=25,
             padding=self.batch_size_per_device > 1,
-            pad_to_multiple_of=16 if self.batch_size_per_device > 1 else None,
             return_attention_mask=True,
             return_tensors='pt'
         )

@@ -15,7 +15,7 @@ scheduler:
 
 net:
   _target_: src.models.components.sign_language_net.SignLanguageNet
-  tokenizer_file: ${paths.root_dir}/src/etc/rwth_phoenix_tokenizer_wordlevel.json
+  tokenizer: ${data.tokenizer}
 
 # compile model for faster training with pytorch 2.0
 compile: False

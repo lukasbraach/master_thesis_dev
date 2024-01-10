@@ -100,8 +100,8 @@ class SignLanguageLitModule(LightningModule):
         output = self.forward(**batch)
         preds = torch.argmax(output.logits, dim=2)
 
-        truth_decoded = self.net.tokenizer.batch_decode(batch["labels"])
-        preds_decoded = self.net.tokenizer.batch_decode(preds)
+        truth_decoded = self.net.tokenizer.batch_decode(batch["labels"], skip_special_tokens=True)
+        preds_decoded = self.net.tokenizer.batch_decode(preds, skip_special_tokens=True)
 
         return output.loss, preds_decoded, truth_decoded
 
@@ -123,9 +123,9 @@ class SignLanguageLitModule(LightningModule):
         self.train_loss(loss)
         self.train_wer(preds, targets)
 
-        # print()
-        # print(f"TRAIN pred: {preds}")
-        # print(f"TRAIN tru:  {targets}")
+        print()
+        print(f"TRAIN pred: {preds}")
+        print(f"TRAIN tru:  {targets}")
 
         self.log("train/batch_idx", batch_idx, on_step=True, prog_bar=True)
         self.log("train/loss", self.train_loss, on_step=False, on_epoch=True, prog_bar=True)

@@ -6,19 +6,21 @@ defaults:
   - default
 
 trainer:
-  max_epochs: 100
-  overfit_batches: 10
-  accelerator: gpu
+  max_epochs: 10
+  overfit_batches: 5
   limit_val_batches: 0
   check_val_every_n_epoch: 1000
 
-optimizer:
-  lr: 2e-4
+  accelerator: gpu
 
-scheduler: null
+model:
+  optimizer:
+    lr: 1e-4
+  scheduler: null
 
 data:
   num_workers: 6
+  batch_size: 2
   pin_memory: True
 
 test: False
