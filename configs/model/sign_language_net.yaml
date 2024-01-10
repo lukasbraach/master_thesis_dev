@@ -3,8 +3,8 @@ _target_: src.models.sign_language_module.SignLanguageLitModule
 optimizer:
   _target_: torch.optim.Adam
   _partial_: true
-  lr: 2e-5
-  weight_decay: 0.01
+  lr: 5e-5
+#  weight_decay: 0.01
 
 scheduler:
   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau

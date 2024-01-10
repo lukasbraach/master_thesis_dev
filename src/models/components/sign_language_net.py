@@ -25,10 +25,12 @@ class SignLanguageNet(SpeechEncoderDecoderModel):
             decoder_start_token_id=self.tokenizer.eos_token_id,
             vocab_size=self.tokenizer.vocab_size,
 
-            d_model=1024,
-            decoder_ffn_dim=2048,
-            decoder_layers=12,
-            decoder_attention_heads=16,
+            d_model=512,
+            decoder_ffn_dim=768,
+            decoder_layers=6,
+            decoder_attention_heads=8,
+
+            layerdrop=0.05
         ))
 
         config = SpeechEncoderDecoderConfig.from_encoder_decoder_configs(encoder.config, decoder.config)
