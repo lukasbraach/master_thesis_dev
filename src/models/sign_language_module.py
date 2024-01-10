@@ -123,11 +123,10 @@ class SignLanguageLitModule(LightningModule):
         self.train_loss(loss)
         self.train_wer(preds, targets)
 
-        print()
-        print(f"TRAIN pred: {preds}")
-        print(f"TRAIN tru:  {targets}")
+        # print()
+        # print(f"TRAIN pred: {preds}")
+        # print(f"TRAIN tru:  {targets}")
 
-        self.log("train/batch_idx", batch_idx, on_step=True, prog_bar=True)
         self.log("train/loss", self.train_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("train/wer", self.train_wer, on_step=False, on_epoch=True, prog_bar=True)
 
@@ -159,7 +158,6 @@ class SignLanguageLitModule(LightningModule):
         self.val_loss(loss)
         self.val_wer(preds, targets)
 
-        self.log("val/batch_idx", batch_idx, on_step=True, prog_bar=True)
         self.log("val/loss", self.val_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("val/wer", self.val_wer, on_step=False, on_epoch=True, prog_bar=True)
 
