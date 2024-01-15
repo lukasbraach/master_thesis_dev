@@ -9,18 +9,22 @@ class SpatiotemporalEncoderConfig(Wav2Vec2Config):
 
     def __init__(self,
                  hidden_size: int = 768,
+                 intermediate_size=3072,
                  dropout: float = 0.1,
                  num_attention_heads: int = 8,
                  num_hidden_layers=12,
                  mask_time_length=1,
+                 hidden_act="gelu",
                  **kwargs
                  ) -> None:
         super().__init__(
             hidden_size=hidden_size,
+            intermediate_size=intermediate_size,
             dropout=dropout,
             num_attention_heads=num_attention_heads,
             num_hidden_layers=num_hidden_layers,
             mask_time_length=mask_time_length,
+            hidden_act=hidden_act,
             **kwargs
         )
 

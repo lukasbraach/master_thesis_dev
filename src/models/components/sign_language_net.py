@@ -25,16 +25,19 @@ class SignLanguageNet(SpeechEncoderDecoderModel):
             decoder_start_token_id=self.tokenizer.eos_token_id,
             vocab_size=self.tokenizer.vocab_size,
 
-            d_model=512,
-            decoder_ffn_dim=768,
-            decoder_layers=6,
-            decoder_attention_heads=8,
+            d_model=256,
+            decoder_ffn_dim=1536,
+            decoder_layers=7,
+            decoder_attention_heads=4,
+            dropout=0.1,
 
             layerdrop=0.05
         ))
 
         config = SpeechEncoderDecoderConfig.from_encoder_decoder_configs(encoder.config, decoder.config)
         config.update(decoder.config.to_diff_dict())
+
+        config.num_beams = 5
 
         super().__init__(config=config)
 

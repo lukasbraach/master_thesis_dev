@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional, Union
 
 import datasets
-from datasets import IterableDataset
+from datasets import IterableDataset, Dataset
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader
 from transformers import PreTrainedTokenizerFast, PreTrainedTokenizer
@@ -31,8 +31,8 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
         self.dataset = datasets.load_dataset(
             'lukasbraach/rwth_phoenix_weather_2014',
             variant,
-            streaming=True,
             trust_remote_code=True,
+            num_proc=32,
         )
 
         self.batch_size_per_device = batch_size
@@ -67,7 +67,7 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             self.batch_size_per_device = self.hparams.batch_size // self.trainer.world_size
 
     def _map_dataset(self, batch):
-        transcription = batch['transcription']
+        transcription = [ex['transcription'] for ex in batch]
 
         labels = self.tokenizer(
             transcription,
@@ -82,7 +82,7 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             }
 
         feature = self.pre_processor(
-            batch['frames'],
+            [ex['frames'] for ex in batch],
             sampling_rate=25,
             padding=self.batch_size_per_device > 1,
             return_attention_mask=True,
@@ -93,22 +93,17 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             'input_values': feature.input_values,
             'attention_mask': feature.attention_mask,
             'labels': labels.input_ids,
+            'ids': [ex['id'] for ex in batch],
         }
 
         return result
 
-    def _instantiate_data_loader(self, dataset: IterableDataset) -> DataLoader:
-        dataset = dataset.map(
-            function=self._map_dataset,
-            batched=True,
-            batch_size=self.batch_size_per_device,
-            remove_columns=['frames'] if self.hparams.variant != 'pre-training' else None,
-        )
-
+    def _instantiate_data_loader(self, dataset: Union[IterableDataset, Dataset]) -> DataLoader:
         data_loader = DataLoader(
             dataset=dataset,
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
+            collate_fn=self._map_dataset,
             prefetch_factor=3,
         )
 

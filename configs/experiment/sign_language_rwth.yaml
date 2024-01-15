@@ -7,7 +7,7 @@ defaults:
   - override /data: rwth_phoenix_2014
   - override /model: sign_language_net
   - override /callbacks: default
-  - override /trainer: default
+  - override /trainer: ddp
 
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
@@ -17,11 +17,12 @@ tags: ["sign_language", "rwth_phoenix"]
 seed: 12345
 
 trainer:
-  min_epochs: 3
-  max_epochs: 30
+  min_epochs: 10
+  max_epochs: 15
+  precision: 32
   accumulate_grad_batches: 8
   gradient_clip_val: 0.5
-  accelerator: gpu
+  devices: 2
 
 logger:
   wandb:
@@ -35,9 +36,7 @@ callbacks:
     monitor: "val/wer"
     mode: "min"
     save_last: True
-    auto_insert_metric_name: False
+    every_n_epochs: 1
+    auto_insert_metric_name: True
 
-  early_stopping:
-    monitor: "val/wer"
-    patience: 2
-    mode: "min"
+  early_stopping: null
