@@ -5,7 +5,7 @@
 
 defaults:
   - override /data: rwth_phoenix_2014
-  - override /model: sign_language_net
+  - override /model: sign_language_module
   - override /callbacks: default
   - override /trainer: ddp
 

@@ -1,3 +1,7 @@
+defaults:
+  - _self_
+  - net: sign_language_net
+
 _target_: src.models.sign_language_module.SignLanguageLitModule
 
 optimizer:
@@ -11,10 +15,6 @@ scheduler:
   mode: min
   factor: 0.1
   patience: 10
-
-net:
-  _target_: src.models.components.sign_language_net.SignLanguageNet
-  tokenizer: ${data.tokenizer}
 
 # compile model for faster training with pytorch 2.0
 compile: False

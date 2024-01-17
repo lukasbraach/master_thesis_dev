@@ -13,26 +13,11 @@ class SignLanguageNet(SpeechEncoderDecoderModel):
 
     def __init__(
             self,
+            encoder: SpatiotemporalEncoder,
+            decoder: LanguageDecoder,
             tokenizer: Union[PreTrainedTokenizer, PreTrainedTokenizerFast],
     ) -> None:
         self.tokenizer = tokenizer
-
-        encoder = SpatiotemporalEncoder(SpatiotemporalEncoderConfig())
-        decoder = LanguageDecoder(Speech2Text2Config(
-            pad_token_id=self.tokenizer.pad_token_id,
-            bos_token_id=self.tokenizer.bos_token_id,
-            eos_token_id=self.tokenizer.eos_token_id,
-            decoder_start_token_id=self.tokenizer.eos_token_id,
-            vocab_size=self.tokenizer.vocab_size,
-
-            d_model=256,
-            decoder_ffn_dim=1536,
-            decoder_layers=7,
-            decoder_attention_heads=4,
-            dropout=0.1,
-
-            layerdrop=0.05
-        ))
 
         config = SpeechEncoderDecoderConfig.from_encoder_decoder_configs(encoder.config, decoder.config)
         config.update(decoder.config.to_diff_dict())
