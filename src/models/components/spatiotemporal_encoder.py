@@ -15,6 +15,7 @@ class SpatiotemporalEncoderConfig(Wav2Vec2Config):
                  num_hidden_layers: int = 12,
                  mask_time_length: int = 1,
                  hidden_act="gelu",
+                 freeze_feature_extractor=True,
                  **kwargs
                  ) -> None:
         super().__init__(
@@ -28,6 +29,8 @@ class SpatiotemporalEncoderConfig(Wav2Vec2Config):
             **kwargs
         )
 
+        self.freeze_feature_extractor = freeze_feature_extractor
+
 
 class SpatialFeatureEncoder(nn.Module):
     """Construct the features from raw video frames"""
@@ -40,8 +43,10 @@ class SpatialFeatureEncoder(nn.Module):
             torch_dtype="auto",
         )
 
+        self.frozen = config.freeze_feature_extractor
+
     def forward(self, pixel_values):
-        with torch.no_grad():
+        with torch.no_grad() if self.frozen else torch.enable_grad():
             batch_size = pixel_values.shape[0]
             seq_length = pixel_values.shape[1]
 
