@@ -91,7 +91,7 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
 
         result = {
             'input_values': feature.input_values,
-            'attention_mask': feature.attention_mask,
+            'attention_mask': feature.attention_mask if self.batch_size_per_device > 1 else None,
             'labels': labels.input_ids,
             'ids': [ex['id'] for ex in batch],
         }

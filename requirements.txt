@@ -27,4 +27,7 @@ datasets
 transformers
 accelerate
 tokenizers
+optimum
+fairscale
+
 jupyterlab

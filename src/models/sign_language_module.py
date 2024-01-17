@@ -219,13 +219,10 @@ class SignLanguageLitModule(LightningModule):
         .. warning:: DO NOT set state to the model (use ``setup`` instead)
             since this is NOT called on every device
         """
-
-        if isinstance(self.logger, WandbLogger):
-            self.logger.watch(self.net, log="all", log_freq=500)
+        pass
 
     def on_fit_end(self) -> None:
-        if isinstance(self.logger, WandbLogger):
-            self.logger.experiment.unwatch(self.net)
+        pass
 
     def setup(self, stage: str) -> None:
         """Lightning hook that is called at the beginning of fit (train + validate), validate,

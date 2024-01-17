@@ -3,9 +3,14 @@ _target_: src.models.sign_language_module.SignLanguageLitModule
 optimizer:
   _target_: torch.optim.Adam
   _partial_: true
-  lr: 3e-5
+  lr: 4e-5
 
-scheduler: null
+scheduler:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _partial_: true
+  mode: min
+  factor: 0.1
+  patience: 10
 
 net:
   _target_: src.models.components.sign_language_net.SignLanguageNet
