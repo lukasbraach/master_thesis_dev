@@ -9,6 +9,9 @@ from transformers.modeling_outputs import Seq2SeqLMOutput
 
 from src.models.components.sign_language_net import SignLanguageNet
 
+# Faster training on Ampere cards...
+torch.backends.cuda.matmul.allow_tf32 = True
+
 
 class SignLanguageLitModule(LightningModule):
     def __init__(
