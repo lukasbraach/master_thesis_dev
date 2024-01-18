@@ -1,4 +1,3 @@
-import functools
 from typing import List, Set
 
 import hydra
@@ -12,6 +11,3 @@ def new(classpaths: List[str]) -> Set[type]:
         result.append(cls)
 
     return set(result)
-
-def part():
-    functools.partial

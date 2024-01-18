@@ -4,7 +4,7 @@ import datasets
 from datasets import IterableDataset, Dataset
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader
-from transformers import PreTrainedTokenizerFast, PreTrainedTokenizer
+from transformers import PreTrainedTokenizerFast, PreTrainedTokenizer, SequenceFeatureExtractor
 
 from src.models.components.feature_extractor_dinov2 import SignLanguageFeatureExtractor
 
@@ -13,8 +13,9 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
     def __init__(
             self,
             tokenizer: Union[PreTrainedTokenizer, PreTrainedTokenizerFast],
+            pre_processor: SequenceFeatureExtractor = SignLanguageFeatureExtractor(),
             batch_size: int = 1,
-            num_workers: int = 24,
+            num_workers: int = 32,
             streaming=True,
             pin_memory=False,
             variant='multisigner',
@@ -26,7 +27,7 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
         self.save_hyperparameters(logger=False)
 
         # initialized in setup function.
-        self.pre_processor = SignLanguageFeatureExtractor()
+        self.pre_processor = pre_processor
         self.tokenizer = tokenizer
         self.dataset = datasets.load_dataset(
             'lukasbraach/rwth_phoenix_weather_2014',
@@ -104,7 +105,6 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
             collate_fn=self._map_dataset,
-            prefetch_factor=3,
         )
 
         return data_loader

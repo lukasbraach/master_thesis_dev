@@ -89,6 +89,9 @@ class SignLanguageLitModule(LightningModule):
             - A tensor of predictions.
             - A tensor of target labels.
         """
+
+        torch.cuda.empty_cache()
+
         output = self.forward(**batch)
         preds = torch.argmax(output.logits, dim=2)
 

@@ -35,6 +35,7 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
             self,
             sampling_rate=25,
             return_attention_mask=False,
+            return_every_nth_element=1,
             **kwargs,
     ):
         super().__init__(
@@ -43,6 +44,7 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
             sampling_rate=sampling_rate, **kwargs
         )
         self.return_attention_mask = return_attention_mask
+        self.return_every_nth_element = return_every_nth_element
 
         self._image_processor = AutoImageProcessor.from_pretrained("facebook/dinov2-base")
 
@@ -192,7 +194,9 @@ class SignLanguageFeatureExtractor(SequenceFeatureExtractor):
             x = [x]
 
         def extract(frame_batch):
+            frame_batch = frame_batch[::self.return_every_nth_element]
             processed = self._image_processor(images=frame_batch, return_tensors='np')
+
             return processed['pixel_values']
 
         x = [
