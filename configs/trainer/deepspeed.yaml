@@ -1,0 +1,23 @@
+defaults:
+  - default
+
+strategy:
+  _target_: lightning.pytorch.strategies.FSDPStrategy
+  sharding_strategy: FULL_SHARD
+  state_dict_type: full
+  
+  auto_wrap_policy:
+    _target_: hydra.utils.get_static_method
+    path: torch.distributed.fsdp.wrap.size_based_auto_wrap_policy
+
+  activation_checkpointing_policy:
+    _target_: src.utils.class_set.new
+    classpaths:
+      - transformers.models.dinov2.modeling_dinov2.Dinov2Layer
+      - transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2EncoderLayer
+      - transformers.models.speech_to_text_2.modeling_speech_to_text_2.Speech2Text2Decoder
+
+accelerator: gpu
+devices: 2
+num_nodes: 1
+sync_batchnorm: True

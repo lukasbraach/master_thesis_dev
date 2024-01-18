@@ -4,6 +4,7 @@
 
 defaults:
   - default
+  - override /trainer: deepspeed
 
 trainer:
   max_epochs: 10
@@ -12,6 +13,7 @@ trainer:
   check_val_every_n_epoch: 1000
 
   accelerator: gpu
+  devices: 2
 
 model:
   optimizer:
@@ -19,11 +21,17 @@ model:
   scheduler: null
 
 data:
-  num_workers: 6
-  batch_size: 2
+  num_workers: 16
+  batch_size: 4
   pin_memory: True
 
 test: False
 
 # model ckpt and early stopping need to be disabled during overfitting
-callbacks: null
+callbacks:
+  model_summary:
+    _target_: lightning.pytorch.callbacks.RichModelSummary
+    max_depth: -1
+
+  rich_progress_bar:
+    _target_: lightning.pytorch.callbacks.RichProgressBar

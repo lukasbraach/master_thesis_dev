@@ -7,7 +7,7 @@ defaults:
   - override /data: rwth_phoenix_2014
   - override /model: sign_language_module
   - override /callbacks: default
-  - override /trainer: ddp
+  - override /trainer: deepspeed
 
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
@@ -22,6 +22,7 @@ trainer:
   precision: 32
   accumulate_grad_batches: 8
   gradient_clip_val: 0.5
+  gradient_clip_algorithm: value
   devices: 2
 
 logger:
