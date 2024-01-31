@@ -2,6 +2,7 @@ from typing import Any, Dict, Optional, Union
 
 import datasets
 import torch
+import transformers
 from datasets import IterableDataset, Dataset
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader
@@ -30,6 +31,7 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
         # initialized in setup function.
         self.pre_processor = pre_processor
         self.tokenizer = tokenizer
+
         self.dataset = datasets.load_dataset(
             'lukasbraach/rwth_phoenix_weather_2014',
             variant,
@@ -37,6 +39,13 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             streaming=streaming,
             num_proc=num_workers if not streaming else None,
         )
+
+        if variant == 'pre-training':
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+            self.collator = transformers.DataCollatorForLanguageModeling(
+                tokenizer=self.tokenizer,
+                mlm=False,
+            )
 
         self.batch_size_per_device = batch_size
 
@@ -77,14 +86,13 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             padding=self.batch_size_per_device > 1,
             return_tensors='pt',
             return_length=True,
-            return_attention_mask=True,
+            return_attention_mask=False,
         )
 
         if self.hparams.variant == 'pre-training':
-            return {
-                'input_values': labels.input_ids,
-                'attention_mask': labels.attention_mask,
-            }
+            collated = self.collator(labels.input_ids)
+
+            return collated
 
         feature = self.pre_processor(
             [ex['frames'] for ex in batch],
@@ -111,7 +119,6 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             collate_fn=self._map_dataset,
             pin_memory=self.hparams.pin_memory,
             persistent_workers=True,
-            multiprocessing_context='fork' if torch.backends.mps.is_available() else None,
         )
 
         return data_loader

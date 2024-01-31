@@ -2,12 +2,12 @@ defaults:
   - _self_
   - net: decoder/language_decoder
 
-_target_: src.models.sign_language_module.SignLanguageLitModule
+_target_: src.models.sign_language_pretraining.SignLanguagePretrainingLitModule
 
 optimizer:
   _target_: torch.optim.Adam
   _partial_: true
-  lr: 4e-5
+  lr: 2e-5
 
 scheduler:
   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
