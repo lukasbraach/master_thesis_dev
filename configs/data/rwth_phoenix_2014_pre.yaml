@@ -1,0 +1,16 @@
+_target_: src.data.rwth_phoenix_2014_datamodule.RWTHPhoenix2014DataModule
+
+batch_size: 16 # Needs to be divisible by the number of devices (e.g., if in a distributed setup)
+num_workers: 1
+pin_memory: False
+variant: pre-training
+
+tokenizer:
+  _target_: transformers.PreTrainedTokenizerFast
+  tokenizer_file: ${paths.root_dir}/src/etc/rwth_phoenix_tokenizer_wordlevel.json
+  model_input_names:
+    - 'input_values'
+  pad_token: "__PAD__"
+  bos_token: "__ON__"
+  eos_token: "__OFF__"
+  unk_token: "__UNK__"

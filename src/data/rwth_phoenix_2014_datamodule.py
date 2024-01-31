@@ -1,6 +1,7 @@
 from typing import Any, Dict, Optional, Union
 
 import datasets
+import torch
 from datasets import IterableDataset, Dataset
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader
@@ -33,7 +34,8 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             'lukasbraach/rwth_phoenix_weather_2014',
             variant,
             trust_remote_code=True,
-            num_proc=32,
+            streaming=streaming,
+            num_proc=num_workers if not streaming else None,
         )
 
         self.batch_size_per_device = batch_size
@@ -75,11 +77,13 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             padding=self.batch_size_per_device > 1,
             return_tensors='pt',
             return_length=True,
+            return_attention_mask=True,
         )
 
         if self.hparams.variant == 'pre-training':
             return {
-                'labels': labels.input_ids,
+                'input_values': labels.input_ids,
+                'attention_mask': labels.attention_mask,
             }
 
         feature = self.pre_processor(
@@ -105,6 +109,9 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
             collate_fn=self._map_dataset,
+            pin_memory=self.hparams.pin_memory,
+            persistent_workers=True,
+            multiprocessing_context='fork' if torch.backends.mps.is_available() else None,
         )
 
         return data_loader

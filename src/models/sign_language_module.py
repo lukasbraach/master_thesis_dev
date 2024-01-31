@@ -55,7 +55,7 @@ class SignLanguageLitModule(LightningModule):
 
     def forward(
             self,
-            input_values: torch.Tensor,
+            input_values: Optional[torch.Tensor] = None,
             attention_mask: Optional[torch.Tensor] = None,
             labels: Optional[torch.LongTensor] = None,
             **kwargs,
@@ -66,7 +66,12 @@ class SignLanguageLitModule(LightningModule):
         :param input_values: A tensor of images.
         :return: A tensor of logits.
         """
-        outputs = self.net(input_values=input_values, attention_mask=attention_mask, labels=labels)
+        outputs = self.net(
+            input_values,
+            attention_mask=attention_mask,
+            labels=labels
+        )
+
         return outputs
 
     def on_train_start(self) -> None:
