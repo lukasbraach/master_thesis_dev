@@ -31,4 +31,13 @@ tokenizers
 optimum
 fairscale
 
+mediapipe
+cv2
+
 jupyterlab
+
+numpy
+omegaconf
+pillow
+packaging
+setuptools

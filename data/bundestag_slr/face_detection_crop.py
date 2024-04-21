@@ -8,12 +8,12 @@ mp_face_detection = mp.solutions.face_detection
 face_detection = mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.5)
 
 # OpenCV setup for video capture
-video_path = "path_to_your_video.mp4"
-output_path = "output_video.mp4"
+video_path = "/Users/lubr/Downloads/SD_demoA.mp4"
+output_path = "/Users/lubr/Downloads/worked.mp4"
 cap = cv2.VideoCapture(video_path)
 
 # Buffer for storing recent bounding box coordinates for the moving average
-buffer_size = 15  # half a second for 30 fps video
+buffer_size = 30  # half a second for 30 fps video
 bounding_box_buffer = deque(maxlen=buffer_size)
 
 # Output video setup
@@ -21,7 +21,8 @@ frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 frame_rate = int(cap.get(cv2.CAP_PROP_FPS))
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-out = cv2.VideoWriter(output_path, fourcc, frame_rate, (frame_width, frame_height))
+out = cv2.VideoWriter(output_path, fourcc, frame_rate // 2, (224, 224))
+
 
 # Function to calculate the moving average of bounding box coordinates
 def moving_average(bounding_box_buffer):
@@ -29,11 +30,19 @@ def moving_average(bounding_box_buffer):
     avg_bbox = np.mean(bounding_box_buffer, axis=0)
     return avg_bbox
 
+
 # Process the video frame by frame
+i = 0
+
 while cap.isOpened():
     ret, frame = cap.read()
     if not ret:
         break
+
+    i += 1
+
+    if i % 2 == 0:
+        continue  # only every second frame
 
     # Perform face detection
     results = face_detection.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
@@ -54,7 +63,7 @@ while cap.isOpened():
         smoothed_bbox = moving_average(bounding_box_buffer)
 
         # Determine the cropping square size
-        max_dimension = max(smoothed_bbox[2], smoothed_bbox[3])  # width or height
+        max_dimension = max(smoothed_bbox[2], smoothed_bbox[3]) * 3  # width or height
         crop_size = int(max_dimension * frame_width)  # proportional size in pixels
 
         # Calculate top-left corner of the crop area
@@ -67,7 +76,7 @@ while cap.isOpened():
 
         # Crop the square region and resize to frame size
         crop = frame[top_left_y:top_left_y + crop_size, top_left_x:top_left_x + crop_size]
-        crop = cv2.resize(crop, (frame_width, frame_height))
+        crop = cv2.resize(crop, (224, 224))
 
         # Write the cropped frame to the output video
         out.write(crop)
