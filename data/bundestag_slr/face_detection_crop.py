@@ -8,12 +8,12 @@ mp_face_detection = mp.solutions.face_detection
 face_detection = mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.5)
 
 # OpenCV setup for video capture
-video_path = "/Users/lubr/Downloads/SD_demoA.mp4"
+video_path = "/Users/lubr/Downloads/CLSFBI0911A_S020_B.mp4"
 output_path = "/Users/lubr/Downloads/worked.mp4"
 cap = cv2.VideoCapture(video_path)
 
 # Buffer for storing recent bounding box coordinates for the moving average
-buffer_size = 30  # half a second for 30 fps video
+buffer_size = 15  # half a second for 30 fps video
 bounding_box_buffer = deque(maxlen=buffer_size)
 
 # Output video setup
@@ -41,7 +41,7 @@ while cap.isOpened():
 
     i += 1
 
-    if i % 2 == 0:
+    if i % 4 == 0:
         continue  # only every second frame
 
     # Perform face detection
