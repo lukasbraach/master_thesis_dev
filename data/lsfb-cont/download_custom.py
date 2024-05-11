@@ -2,12 +2,13 @@ import csv
 import os
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
+from lsfb_dataset import Downloader
 
 # Path to the CSV file
-csv_file_path = 'instances.csv'
+csv_file_path = './dataset/instances.csv'
 
 # Directory where the files will be saved
-destination_directory = 'videos/'
+destination_directory = './dataset/videos/'
 
 # Ensure the destination directory exists
 os.makedirs(destination_directory, exist_ok=True)
@@ -22,6 +23,10 @@ def download_file(file_id):
 
 # Process the CSV and download files
 def process_files():
+    downloader = Downloader(dataset='cont', destination="./dataset", landmarks=[], include_videos=False,
+                            max_parallel_connections=2, skip_existing_files=True)
+    downloader.download()
+
     with open(csv_file_path, newline='') as csvfile:
         reader = csv.reader(csvfile)
         next(reader)  # Skip the header row
