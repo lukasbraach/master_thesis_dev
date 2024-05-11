@@ -24,7 +24,7 @@ def download_file(file_id):
 # Process the CSV and download files
 def process_files():
     downloader = Downloader(dataset='cont', destination="./dataset", landmarks=[], include_videos=False,
-                            max_parallel_connections=2, skip_existing_files=True)
+                            max_parallel_connections=10, skip_existing_files=True)
     downloader.download()
 
     with open(csv_file_path, newline='') as csvfile:
