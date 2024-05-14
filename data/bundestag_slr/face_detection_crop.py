@@ -32,7 +32,7 @@ frame_rate_divisor = 4
 frame_size_multiplier = get_sample_aspect_ratio(video_path)
 
 # Buffer for storing recent bounding box coordinates for the moving average
-buffer_size = 30  # half a second for 30 fps video
+buffer_size = 150  # half a second for 30 fps video
 bounding_box_buffer = deque(maxlen=buffer_size)
 
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -78,7 +78,7 @@ while cap.isOpened():
         smoothed_bbox = moving_average(bounding_box_buffer)
 
         # Determine the cropping square size
-        max_dimension = max(smoothed_bbox[2], smoothed_bbox[3]) * 3.6  # width or height
+        max_dimension = max(smoothed_bbox[2], smoothed_bbox[3]) * 3.3  # width or height
         crop_size = int(max_dimension * frame_width)  # proportional size in pixels
 
         # Calculate top-left corner of the crop area

@@ -4,6 +4,13 @@ import cv2
 import os
 
 
+# BUNDESTAG SLR content can be found by video ID
+# on https://dbtg.tv/cvid/7605085 where 7605085 is the video ID
+#
+# by running curl https://webtv.bundestag.de/player/macros/_x_s-144277506/shareData.json?contentId=7605085
+# all download links can be found.
+
+
 def download_playlist(playlist_url, download_path='./downloads'):
     ydl_opts = {
         "format": "bestvideo[ext=mp4]+bestaudio",
