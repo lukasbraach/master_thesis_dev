@@ -33,6 +33,7 @@ fairscale
 
 mediapipe
 cv2
+av
 
 jupyterlab
 

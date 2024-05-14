@@ -1,7 +1,18 @@
+from collections import deque
+
+import av
 import cv2
 import mediapipe as mp
 import numpy as np
-from collections import deque
+
+
+def get_sample_aspect_ratio(video_path: str) -> float:
+    # Open the video file with PyAV
+    container = av.open(video_path)
+    video_stream = next(s for s in container.streams if s.type == 'video')
+
+    return video_stream.sample_aspect_ratio.numerator / video_stream.sample_aspect_ratio.denominator
+
 
 # MediaPipe face detection setup
 mp_face_detection = mp.solutions.face_detection
@@ -18,7 +29,7 @@ frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 frame_rate = cap.get(cv2.CAP_PROP_FPS)
 
 frame_rate_divisor = 4
-frame_size_multiplier = 1.4
+frame_size_multiplier = get_sample_aspect_ratio(video_path)
 
 # Buffer for storing recent bounding box coordinates for the moving average
 buffer_size = 30  # half a second for 30 fps video
