@@ -32,7 +32,7 @@ def process_video(video_path, subtitle_info, output_folder):
     frame_rate = cap.get(cv2.CAP_PROP_FPS)
     frame_size_multiplier = get_sample_aspect_ratio(video_path)
 
-    frame_rate_divisor = int(round(frame_rate / 12.5))  # target are approximately 12.5 fps
+    frame_rate_divisor = int(round(frame_rate / 12.5))  # target approximately 12.5 fps
     buffer_size = 120  # about 10 seconds of video
     bounding_box_buffer = deque(maxlen=buffer_size)
 
@@ -41,11 +41,13 @@ def process_video(video_path, subtitle_info, output_folder):
         return avg_bbox
 
     for idx, segment in enumerate(subtitle_info):
-        start_frame = segment['start']
-        end_frame = segment['end']
+        start_time = segment['start'] / 1000  # convert milliseconds to seconds
+        end_time = segment['end'] / 1000  # convert milliseconds to seconds
+        start_frame = int(start_time * frame_rate)
+        end_frame = int(end_time * frame_rate)
         output_path = os.path.join(output_folder, f"{idx}.mp4")
 
-        logging.info(f"Processing segment {idx}: {start_frame} to {end_frame}")
+        logging.info(f"Processing segment {idx}: {start_frame} to {end_frame} (frames)")
 
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         out = cv2.VideoWriter(output_path, fourcc, frame_rate / frame_rate_divisor, (224, 224))
@@ -99,7 +101,7 @@ def process_video(video_path, subtitle_info, output_folder):
 
 
 def main():
-    dataset_path = "/path/to/dataset"  # Change to the actual dataset path
+    dataset_path = "."  # Change to the actual dataset path
     subtitles_path = os.path.join(dataset_path, "annotations/subtitles.json")
     videos_path = os.path.join(dataset_path, "videos")
     output_base_path = os.path.join(dataset_path, "videos_processed")

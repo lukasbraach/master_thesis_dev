@@ -72,7 +72,7 @@ def download_videos_from_csv(csv_file, dest_dir):
 
     with open(csv_file, 'r') as file:
         reader = csv.DictReader(file)
-        for row in reader:
+        for i, row in enumerate(reader):
             video_id = row['VideoID']
             print(f"Processing video ID: {video_id}")
 
@@ -89,7 +89,9 @@ def download_videos_from_csv(csv_file, dest_dir):
             except Exception as e:
                 print(f"Failed to process video ID {video_id}: {e}")
 
-            break
+            if i > 2:
+                break
+
 
 
 if __name__ == "__main__":
