@@ -1,11 +1,15 @@
 import os
 import json
+import logging
 from collections import deque
 
 import av
 import cv2
 import mediapipe as mp
 import numpy as np
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 def get_sample_aspect_ratio(video_path: str) -> float:
@@ -20,14 +24,14 @@ face_detection = mp_face_detection.FaceDetection(model_selection=1, min_detectio
 
 
 def process_video(video_path, subtitle_info, output_folder):
-    # OpenCV setup for video capture
+    logging.info(f"Processing video: {video_path}")
+
     cap = cv2.VideoCapture(video_path)
     frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     frame_rate = cap.get(cv2.CAP_PROP_FPS)
     frame_size_multiplier = get_sample_aspect_ratio(video_path)
 
-    # Buffer for storing recent bounding box coordinates for the moving average
     frame_rate_divisor = int(round(frame_rate / 12.5))  # target are approximately 12.5 fps
     buffer_size = 120  # about 10 seconds of video
     bounding_box_buffer = deque(maxlen=buffer_size)
@@ -41,6 +45,8 @@ def process_video(video_path, subtitle_info, output_folder):
         end_frame = segment['end']
         output_path = os.path.join(output_folder, f"{idx}.mp4")
 
+        logging.info(f"Processing segment {idx}: {start_frame} to {end_frame}")
+
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         out = cv2.VideoWriter(output_path, fourcc, frame_rate / frame_rate_divisor, (224, 224))
 
@@ -50,6 +56,7 @@ def process_video(video_path, subtitle_info, output_folder):
         while cap.isOpened() and i <= end_frame:
             ret, frame = cap.read()
             if not ret:
+                logging.warning(f"Frame read failed at frame {i}. Ending segment processing.")
                 break
 
             if i % frame_rate_divisor == 0:
@@ -85,13 +92,14 @@ def process_video(video_path, subtitle_info, output_folder):
 
             i += 1
 
+        logging.info(f"Finished processing segment {idx}")
         out.release()
 
     cap.release()
 
 
 def main():
-    dataset_path = "."  # Change to the actual dataset path
+    dataset_path = "/path/to/dataset"  # Change to the actual dataset path
     subtitles_path = os.path.join(dataset_path, "annotations/subtitles.json")
     videos_path = os.path.join(dataset_path, "videos")
     output_base_path = os.path.join(dataset_path, "videos_processed")
@@ -104,7 +112,9 @@ def main():
         output_folder = os.path.join(output_base_path, video_id)
         os.makedirs(output_folder, exist_ok=True)
 
+        logging.info(f"Starting processing for video {video_id}")
         process_video(video_file_path, segments, output_folder)
+        logging.info(f"Completed processing for video {video_id}")
 
 
 if __name__ == "__main__":
