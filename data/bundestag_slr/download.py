@@ -24,3 +24,76 @@
 #         "message": "ok"
 #     }
 # }
+
+import requests
+import csv
+import os
+from tqdm import tqdm
+
+
+def get_download_links(video_id):
+    url = f"https://webtv.bundestag.de/player/macros/_x_s-144277506/shareData.json?contentId={video_id}"
+    response = requests.get(url)
+    data = response.json()
+    return data['downloadUrl'], data['downloadUrlSRT']
+
+
+def download_file(url, dest_path):
+    headers = {}
+    existing_file_size = 0
+
+    if os.path.exists(dest_path):
+        existing_file_size = os.path.getsize(dest_path)
+        headers['Range'] = f'bytes={existing_file_size}-'
+
+    response = requests.get(url, headers=headers, stream=True)
+    total_size = int(response.headers.get('content-length', 0)) + existing_file_size
+
+    mode = 'ab' if 'Range' in headers else 'wb'
+
+    with open(dest_path, mode) as file, tqdm(
+            desc=dest_path,
+            total=total_size,
+            unit='B',
+            unit_scale=True,
+            unit_divisor=1024,
+            initial=existing_file_size,
+            ncols=80
+    ) as bar:
+        for chunk in response.iter_content(chunk_size=8192):
+            if chunk:
+                file.write(chunk)
+                bar.update(len(chunk))
+
+
+def download_videos_from_csv(csv_file, dest_dir):
+    if not os.path.exists(dest_dir):
+        os.makedirs(dest_dir)
+
+    with open(csv_file, 'r') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            video_id = row['VideoID']
+            print(f"Processing video ID: {video_id}")
+
+            try:
+                video_url, srt_url = get_download_links(video_id)
+                video_path = os.path.join(dest_dir, f"{video_id}.mp4")
+                srt_path = os.path.join(dest_dir, f"{video_id}.srt")
+
+                print(f"Downloading video to {video_path}")
+                download_file(video_url, video_path)
+
+                print(f"Downloading subtitles to {srt_path}")
+                download_file(srt_url, srt_path)
+            except Exception as e:
+                print(f"Failed to process video ID {video_id}: {e}")
+
+            break
+
+
+if __name__ == "__main__":
+    csv_file = 'video_ids.csv'  # Path to your CSV file with video IDs
+    dest_dir = 'raw'  # Directory to save downloaded videos and subtitles
+    download_videos_from_csv(csv_file, dest_dir)
+    print("Download process completed.")

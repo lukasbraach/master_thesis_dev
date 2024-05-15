@@ -19,7 +19,7 @@ mp_face_detection = mp.solutions.face_detection
 face_detection = mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.5)
 
 # OpenCV setup for video capture
-video_path = "/Users/lubr/Downloads/CLSFBI0911A_S020_B_trim.mp4"
+video_path = "/Users/lubr/Downloads/Bundestag.mp4"
 output_path = "/Users/lubr/Downloads/worked.mp4"
 cap = cv2.VideoCapture(video_path)
 
@@ -27,11 +27,10 @@ cap = cv2.VideoCapture(video_path)
 frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 frame_rate = cap.get(cv2.CAP_PROP_FPS)
-
-frame_rate_divisor = 4
 frame_size_multiplier = get_sample_aspect_ratio(video_path)
 
 # Buffer for storing recent bounding box coordinates for the moving average
+frame_rate_divisor = 4  # process every second frame
 buffer_size = 150  # half a second for 30 fps video
 bounding_box_buffer = deque(maxlen=buffer_size)
 
