@@ -30,8 +30,8 @@ frame_rate = cap.get(cv2.CAP_PROP_FPS)
 frame_size_multiplier = get_sample_aspect_ratio(video_path)
 
 # Buffer for storing recent bounding box coordinates for the moving average
-frame_rate_divisor = 4  # process every second frame
-buffer_size = 150  # half a second for 30 fps video
+frame_rate_divisor = int(round(frame_rate / 12.5))  # target are approximately 12.5 fps
+buffer_size = 120  # about 10 seconds of video
 bounding_box_buffer = deque(maxlen=buffer_size)
 
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -103,7 +103,7 @@ while cap.isOpened():
         crop[start_y:end_y, start_x:end_x] = frame[max(0, top_left_y):src_end_y, max(0, top_left_x):src_end_x]
 
         # Resize to the desired size
-        crop = cv2.resize(crop, (224, 224))
+        crop = cv2.resize(crop, (224, 224), interpolation=cv2.INTER_AREA)
 
         # Write the cropped frame to the output video
         out.write(crop)
