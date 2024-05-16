@@ -112,6 +112,15 @@ def main():
     for video_id, segments in subtitles.items():
         video_file_path = os.path.join(videos_path, f"{video_id}.mp4")
         output_folder = os.path.join(output_base_path, video_id)
+
+        if not os.path.exists(video_file_path):
+            logging.warning(f"Video file {video_file_path} does not exist. Skipping.")
+            continue
+
+        if os.path.exists(output_folder):
+            logging.info(f"Output folder {output_folder} already exists. Skipping.")
+            continue
+
         os.makedirs(output_folder, exist_ok=True)
 
         logging.info(f"Starting processing for video {video_id}")
