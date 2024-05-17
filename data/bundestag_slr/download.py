@@ -35,7 +35,14 @@ def get_download_links(video_id):
     url = f"https://webtv.bundestag.de/player/macros/_x_s-144277506/shareData.json?contentId={video_id}"
     response = requests.get(url)
     data = response.json()
-    return data['downloadUrl'], data['downloadUrlSRT']
+
+    download_urls = {
+        'medium': data.get('downloadUrlMedium', ''),
+        'high': data.get('downloadUrl', ''),
+        'srt': data.get('downloadUrlSRT', '')
+    }
+
+    return download_urls
 
 
 def download_file(url, dest_path):
@@ -77,21 +84,40 @@ def download_videos_from_csv(csv_file, dest_dir):
             print(f"Processing video ID: {video_id}")
 
             try:
-                video_url, srt_url = get_download_links(video_id)
+                download_urls = get_download_links(video_id)
+
                 video_path = os.path.join(dest_dir, f"{video_id}.mp4")
                 srt_path = os.path.join(dest_dir, f"{video_id}.srt")
 
-                print(f"Downloading video to {video_path}")
-                download_file(video_url, video_path)
+                video_url = download_urls['medium'] or download_urls['high']
+                srt_url = download_urls['srt']
+
+                if not video_url or not srt_url:
+                    print(f"Skipping video ID {video_id} due to missing video or subtitles.")
+                    continue
 
                 print(f"Downloading subtitles to {srt_path}")
                 download_file(srt_url, srt_path)
+
+                try:
+                    if download_urls['medium']:
+                        print(f"Downloading medium quality video to {video_path}")
+                        download_file(download_urls['medium'], video_path)
+                except Exception as e:
+                    print(f"Downloading medium quality video failed. Falling back to high quality.")
+
+                    if download_urls['high']:
+                        print(f"Downloading high quality video to {video_path}")
+                        download_file(download_urls['medium'], video_path)
+
             except Exception as e:
                 print(f"Failed to process video ID {video_id}: {e}")
 
-            if i > 2:
-                break
-
+                # Clean up partially downloaded files
+                if os.path.exists(video_path):
+                    os.remove(video_path)
+                if os.path.exists(srt_path):
+                    os.remove(srt_path)
 
 
 if __name__ == "__main__":
