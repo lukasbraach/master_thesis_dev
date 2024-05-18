@@ -1,37 +1,29 @@
+from typing import List
+
 import pysrt
+from pysrt import SubRipFile, SubRipItem
 
 
-def merge_subtitles(subs):
-    merged_subs = pysrt.SubRipFile()
-    current_text = ""
-    start_time = None
+def get_subtitle_items(subs: SubRipFile) -> List[SubRipItem]:
+    items: List[SubRipItem] = []
 
     for sub in subs:
-        if not start_time:
-            start_time = sub.start
+        sub: SubRipItem = sub
 
-        current_text += " " + sub.text
+        sub.text = sub.text.replace('\n', ' ')
+        items.append(sub)
 
-        if sub.text.endswith(('.', '!', '?')):
-            end_time = sub.end
-            merged_subs.append(
-                pysrt.SubRipItem(index=len(merged_subs) + 1, start=start_time, end=end_time, text=current_text.strip()))
-            current_text = ""
-            start_time = None
-
-    # Add any remaining text as a new subtitle item
-    if current_text:
-        merged_subs.append(
-            pysrt.SubRipItem(index=len(merged_subs) + 1, start=start_time, end=subs[-1].end, text=current_text.strip()))
-
-    return merged_subs
+    return items
 
 
 if __name__ == "__main__":
     input_file = '7610784.srt'
-    output_file = 'output.srt'
 
     subs = pysrt.open(input_file)
-    merged_subs = merge_subtitles(subs)
-    merged_subs.save(output_file, encoding='utf-8')
-    print(f"Merged subtitles have been written to {output_file}")
+    subs_items = get_subtitle_items(subs)
+
+    for i, sub in enumerate(subs_items):
+        start_ms = sub.start.ordinal
+        end_ms = sub.end.ordinal
+
+        print(f"{start_ms} --> {end_ms}: {sub.text}")

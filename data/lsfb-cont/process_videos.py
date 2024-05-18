@@ -11,16 +11,15 @@ import numpy as np
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# MediaPipe face detection setup
+mp_face_detection = mp.solutions.face_detection
+face_detection = mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.5)
+
 
 def get_sample_aspect_ratio(video_path: str) -> float:
     container = av.open(video_path)
     video_stream = next(s for s in container.streams if s.type == 'video')
     return video_stream.sample_aspect_ratio.numerator / video_stream.sample_aspect_ratio.denominator
-
-
-# MediaPipe face detection setup
-mp_face_detection = mp.solutions.face_detection
-face_detection = mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.5)
 
 
 def process_video(video_path, subtitle_info, output_folder):
