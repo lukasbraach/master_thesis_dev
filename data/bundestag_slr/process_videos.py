@@ -3,6 +3,7 @@ import logging
 import os
 from collections import deque
 from typing import List
+from multiprocessing import Pool, cpu_count
 
 import av
 import cv2
@@ -15,23 +16,22 @@ from pysrt import SubRipFile, SubRipItem
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # MediaPipe face detection setup
-mp_face_detection = mp.solutions.face_detection
-face_detection = mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.5)
+def init_mediapipe():
+    mp_face_detection = mp.solutions.face_detection
+    return mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.5)
 
 # Add time around the subtitle to account for alignment issues
 pre_start_seconds = 0
 post_end_seconds = 1.5
 
+buffer_size = 120
+
 
 def get_subtitle_items(subs: SubRipFile) -> List[SubRipItem]:
     items: List[SubRipItem] = []
-
     for sub in subs:
-        sub: SubRipItem = sub
-
         sub.text = sub.text.replace('\n', ' ')
         items.append(sub)
-
     return items
 
 
@@ -44,11 +44,11 @@ def get_sample_aspect_ratio(video_path: str) -> float:
 def crop_signer(frame):
     height, width, _ = frame.shape
     right_half = frame[:, int(3 * width / 5):]
-
     return right_half
 
 
-def process_video(video_path: str, subtitle_path: str, output_folder: str):
+def process_video(args):
+    video_path, subtitle_path, output_folder = args
     logging.info(f"Processing video: {video_path}")
 
     try:
@@ -65,15 +65,13 @@ def process_video(video_path: str, subtitle_path: str, output_folder: str):
 
         return
 
+    face_detection = init_mediapipe()
     cap = cv2.VideoCapture(video_path)
     frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     frame_rate = cap.get(cv2.CAP_PROP_FPS)
-
-    frame_rate_divisor = int(round(frame_rate / 12.5))  # target approximately 12.5 fps
-    buffer_size = 120  # about 10 seconds of video
+    frame_rate_divisor = int(round(frame_rate / 12.5))
     bounding_box_buffer = deque(maxlen=buffer_size)
-
     subtitle_list = []
 
     subs = pysrt.open(subtitle_path)
@@ -93,8 +91,6 @@ def process_video(video_path: str, subtitle_path: str, output_folder: str):
         start_frame = int(start_time * frame_rate)
         end_frame = int(end_time * frame_rate)
         output_path = os.path.join(output_folder, f"{idx}.mp4")
-
-        logging.info(f"Processing segment {idx}: {start_frame} to {end_frame} (frames)")
 
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         out = cv2.VideoWriter(output_path, fourcc, frame_rate / frame_rate_divisor, (224, 224))
@@ -153,11 +149,10 @@ def process_video(video_path: str, subtitle_path: str, output_folder: str):
 
             i += 1
 
-        logging.info(f"Finished processing segment {idx}")
+        logging.info(f"File {video_path}: finished segment {idx} (frame {start_frame} to {end_frame})")
         out.release()
 
         if processing_failed:
-            # Clean up partially processed files
             if os.path.exists(output_path):
                 os.remove(output_path)
         else:
@@ -176,11 +171,13 @@ def main():
     videos_path = os.path.join(dataset_path, "raw")
     output_base_path = os.path.join(dataset_path, "videos_processed")
 
+    tasks = []
+
     with open(video_ids_path, 'r') as file:
         reader = csv.DictReader(file)
-        for i, row in enumerate(reader):
+        for row in reader:
             video_id = row['VideoID']
-            print(f"Processing video ID: {video_id}")
+            logging.info(f"Processing video ID: {video_id}")
 
             video_file_path = os.path.join(videos_path, f"{video_id}.mp4")
             subtitle_file_path = os.path.join(videos_path, f"{video_id}.srt")
@@ -199,10 +196,10 @@ def main():
                 continue
 
             os.makedirs(output_folder, exist_ok=True)
+            tasks.append((video_file_path, subtitle_file_path, output_folder))
 
-            logging.info(f"Starting processing for video {video_id}")
-            process_video(video_file_path, subtitle_file_path, output_folder)
-            logging.info(f"Completed processing for video {video_id}")
+    with Pool(16) as pool:
+        pool.map(process_video, tasks)
 
 
 if __name__ == "__main__":
