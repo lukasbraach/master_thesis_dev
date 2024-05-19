@@ -49,15 +49,34 @@ def download_file(url, dest_path):
     headers = {}
     existing_file_size = 0
 
+    # Check if the file already exists
     if os.path.exists(dest_path):
         existing_file_size = os.path.getsize(dest_path)
         headers['Range'] = f'bytes={existing_file_size}-'
 
+    # Make the HTTP request with range headers if applicable
     response = requests.get(url, headers=headers, stream=True)
+
+    # Get the total file size from response headers, if available
     total_size = int(response.headers.get('content-length', 0)) + existing_file_size
 
+    if response.status_code == 416:
+        # Allow 416 Range Not Satisfiable responses (already fully downloaded)
+        print(f"File already fully downloaded: {dest_path}")
+        return
+
+    # Check if the response indicates a client or server error
+    if response.status_code >= 400:
+        raise Exception(f"Failed to download file. HTTP status code: {response.status_code}")
+
+    # Check for small video files based on content-type and size
+    if response.headers.get("content-type") == 'video/mp4' and total_size < 5_000_000:
+        raise Exception(f"Stopping download. File size too small: {total_size} (less than 5 MB)")
+
+    # Open the file in append mode if resuming, otherwise in write mode
     mode = 'ab' if 'Range' in headers else 'wb'
 
+    # Download the file in chunks and update the progress bar
     with open(dest_path, mode) as file, tqdm(
             desc=dest_path,
             total=total_size,
