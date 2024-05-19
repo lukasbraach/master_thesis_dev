@@ -19,7 +19,7 @@ mp_face_detection = mp.solutions.face_detection
 face_detection = mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.5)
 
 # Add time around the subtitle to account for alignment issues
-pre_start_seconds = .5
+pre_start_seconds = 0
 post_end_seconds = 1.5
 
 
@@ -44,15 +44,30 @@ def get_sample_aspect_ratio(video_path: str) -> float:
 def process_video(video_path: str, subtitle_path: str, output_folder: str):
     logging.info(f"Processing video: {video_path}")
 
+    try:
+        frame_size_multiplier = get_sample_aspect_ratio(video_path)
+    except Exception as e:
+        logging.error("Failed to open video file. Deleting video file and results directory.")
+
+        # Clean up original corrupt file and output directory
+        if os.path.exists(output_folder):
+            os.remove(output_folder)
+
+        if os.path.exists(video_path):
+            os.remove(video_path)
+
+        return
+
     cap = cv2.VideoCapture(video_path)
     frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     frame_rate = cap.get(cv2.CAP_PROP_FPS)
-    frame_size_multiplier = get_sample_aspect_ratio(video_path)
 
     frame_rate_divisor = int(round(frame_rate / 12.5))  # target approximately 12.5 fps
     buffer_size = 120  # about 10 seconds of video
     bounding_box_buffer = deque(maxlen=buffer_size)
+
+    subtitle_list = []
 
     subs = pysrt.open(subtitle_path)
     subs_items = get_subtitle_items(subs)
@@ -129,6 +144,12 @@ def process_video(video_path: str, subtitle_path: str, output_folder: str):
             # Clean up partially processed files
             if os.path.exists(output_path):
                 os.remove(output_path)
+        else:
+            subtitle_list.append(sub.text)
+
+    with open(os.path.join(output_folder, "subtitles.txt"), 'w') as file:
+        for sub in subtitle_list:
+            file.write(sub + "\n")
 
     cap.release()
 
