@@ -41,6 +41,13 @@ def get_sample_aspect_ratio(video_path: str) -> float:
     return video_stream.sample_aspect_ratio.numerator / video_stream.sample_aspect_ratio.denominator
 
 
+def crop_signer(frame):
+    height, width, _ = frame.shape
+    right_half = frame[:, int(3 * width / 5):]
+
+    return right_half
+
+
 def process_video(video_path: str, subtitle_path: str, output_folder: str):
     logging.info(f"Processing video: {video_path}")
 
@@ -105,11 +112,17 @@ def process_video(video_path: str, subtitle_path: str, output_folder: str):
                 break
 
             if i % frame_rate_divisor == 0:
-                results = face_detection.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                signer_frame = crop_signer(frame)
+                width_diff = frame.shape[1] - signer_frame.shape[1]
+
+                results = face_detection.process(cv2.cvtColor(signer_frame, cv2.COLOR_BGR2RGB))
+
                 if results.detections:
                     detection = results.detections[0]
                     bbox = detection.location_data.relative_bounding_box
-                    center_x = bbox.xmin + bbox.width / 2
+
+                    # adapt detected face bounding box to full frame
+                    center_x = width_diff + bbox.xmin + bbox.width / 2
                     center_y = bbox.ymin + bbox.height / 2
                     width = bbox.width
                     height = bbox.height
