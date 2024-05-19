@@ -1,4 +1,3 @@
-import concurrent.futures
 import csv
 import logging
 import os
@@ -177,8 +176,6 @@ def main():
     videos_path = os.path.join(dataset_path, "raw")
     output_base_path = os.path.join(dataset_path, "videos_processed")
 
-    tasks = []
-
     with open(video_ids_path, 'r') as file:
         reader = csv.DictReader(file)
         for i, row in enumerate(reader):
@@ -202,16 +199,10 @@ def main():
                 continue
 
             os.makedirs(output_folder, exist_ok=True)
-            tasks.append((video_file_path, subtitle_file_path, output_folder))
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-        futures = [executor.submit(process_video, video_file_path, subtitle_file_path, output_folder) for
-                   video_file_path, subtitle_file_path, output_folder in tasks]
-        for future in concurrent.futures.as_completed(futures):
-            try:
-                future.result()
-            except Exception as exc:
-                logging.error(f"Generated an exception: {exc}")
+            logging.info(f"Starting processing for video {video_id}")
+            process_video(video_file_path, subtitle_file_path, output_folder)
+            logging.info(f"Completed processing for video {video_id}")
 
 
 if __name__ == "__main__":
