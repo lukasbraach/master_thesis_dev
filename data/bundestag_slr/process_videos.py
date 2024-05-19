@@ -113,7 +113,7 @@ def process_video(video_path: str, subtitle_path: str, output_folder: str):
 
             if i % frame_rate_divisor == 0:
                 signer_frame = crop_signer(frame)
-                width_diff = frame.shape[1] - signer_frame.shape[1]
+                width_diff_rel = (frame.shape[1] - signer_frame.shape[1]) / frame.shape[1]
 
                 results = face_detection.process(cv2.cvtColor(signer_frame, cv2.COLOR_BGR2RGB))
 
@@ -121,8 +121,11 @@ def process_video(video_path: str, subtitle_path: str, output_folder: str):
                     detection = results.detections[0]
                     bbox = detection.location_data.relative_bounding_box
 
-                    # adapt detected face bounding box to full frame
-                    center_x = width_diff + bbox.xmin + bbox.width / 2
+                    # adapt detected relative (!) face bounding box to full frame
+                    bbox.xmin = width_diff_rel + bbox.xmin * (1 - width_diff_rel)
+                    bbox.width = bbox.width * (1 - width_diff_rel)
+
+                    center_x = bbox.xmin + bbox.width / 2
                     center_y = bbox.ymin + bbox.height / 2
                     width = bbox.width
                     height = bbox.height
