@@ -15,10 +15,12 @@ from pysrt import SubRipFile, SubRipItem
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+
 # MediaPipe face detection setup
 def init_mediapipe():
     mp_face_detection = mp.solutions.face_detection
     return mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.5)
+
 
 # Add time around the subtitle to account for alignment issues
 pre_start_seconds = 0
@@ -57,9 +59,6 @@ def process_video(args):
         logging.error("Failed to open video file. Deleting video file and results directory.")
 
         # Clean up original corrupt file and output directory
-        if os.path.exists(output_folder):
-            os.remove(output_folder)
-
         if os.path.exists(video_path):
             os.remove(video_path)
 
@@ -80,6 +79,9 @@ def process_video(args):
     def moving_average(bounding_box_buffer):
         avg_bbox = np.mean(bounding_box_buffer, axis=0)
         return avg_bbox
+
+    # Create results dir.
+    os.makedirs(output_folder, exist_ok=True)
 
     for idx, sub in enumerate(subs_items):
         start_time = sub.start.ordinal / 1000  # convert milliseconds to seconds
@@ -195,10 +197,9 @@ def main():
                 logging.info(f"Output folder {output_folder} already exists. Skipping.")
                 continue
 
-            os.makedirs(output_folder, exist_ok=True)
             tasks.append((video_file_path, subtitle_file_path, output_folder))
 
-    with Pool(16) as pool:
+    with Pool(12) as pool:
         pool.map(process_video, tasks)
 
 
