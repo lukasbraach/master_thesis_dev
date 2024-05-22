@@ -32,7 +32,7 @@ optimum
 fairscale
 
 mediapipe
-cv2
+opencv-python
 av
 
 jupyterlab
