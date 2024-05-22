@@ -1,0 +1,20 @@
+_target_: src.data.rwth_phoenix_2014_datamodule.RWTHPhoenix2014DataModule
+
+batch_size: ${trainer.devices} # Needs to be divisible by the number of devices (e.g., if in a distributed setup)
+num_workers: 32
+pin_memory: True
+max_frame_seq_length: 64
+
+tokenizer:
+  _target_: transformers.PreTrainedTokenizerFast
+  tokenizer_file: ${paths.root_dir}/src/etc/rwth_phoenix_tokenizer_wordlevel.json
+  model_input_names:
+    - 'input_values'
+  pad_token: "__PAD__"
+  bos_token: "__ON__"
+  eos_token: "__OFF__"
+  unk_token: "__UNK__"
+
+pre_processor:
+  _target_: src.models.components.feature_extractor_dinov2.SignLanguageFeatureExtractor
+  return_every_nth_element: 2 # approx. 12 fps

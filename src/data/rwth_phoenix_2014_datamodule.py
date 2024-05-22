@@ -18,6 +18,7 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             pre_processor: SequenceFeatureExtractor = SignLanguageFeatureExtractor(),
             batch_size: int = 1,
             num_workers: int = 32,
+            max_frame_seq_length: int = None,
             streaming=True,
             pin_memory=False,
             variant='multisigner',
@@ -99,7 +100,8 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             sampling_rate=25,
             padding=self.batch_size_per_device > 1,
             return_attention_mask=True,
-            return_tensors='pt'
+            return_tensors='pt',
+            max_length=self.max_frame_seq_length,
         )
 
         result = {
