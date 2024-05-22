@@ -1,0 +1,21 @@
+defaults:
+  - _self_
+  - encoder: encoder/spatiotemporal_encoder
+  - decoder: decoder/spatiotemporal_decoder
+
+_target_: src.models.spatiotemporal_pretraining_module.SpatiotemporalPretrainingModule
+
+optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 2e-5
+
+scheduler:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _partial_: true
+  mode: min
+  factor: 0.1
+  patience: 10
+
+# compile model for faster training with pytorch 2.0
+compile: False
