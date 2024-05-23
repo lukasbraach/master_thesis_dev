@@ -1,7 +1,7 @@
 _target_: src.data.rwth_phoenix_2014_datamodule.RWTHPhoenix2014DataModule
 
 batch_size: ${trainer.devices} # Needs to be divisible by the number of devices (e.g., if in a distributed setup)
-num_workers: 32
+num_workers: 0
 pin_memory: True
 max_frame_seq_length: 64
 

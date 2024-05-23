@@ -1,7 +1,6 @@
 from typing import Any, Dict, Optional, Union
 
 import datasets
-import torch
 import transformers
 from datasets import IterableDataset, Dataset
 from lightning import LightningDataModule
@@ -15,7 +14,7 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
     def __init__(
             self,
             tokenizer: Union[PreTrainedTokenizer, PreTrainedTokenizerFast],
-            pre_processor: SequenceFeatureExtractor = SignLanguageFeatureExtractor(),
+            pre_processor: SignLanguageFeatureExtractor = SignLanguageFeatureExtractor(),
             batch_size: int = 1,
             num_workers: int = 32,
             max_frame_seq_length: int = None,
@@ -49,6 +48,7 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             )
 
         self.batch_size_per_device = batch_size
+        self.max_frame_seq_length = max_frame_seq_length
 
     def prepare_data(self) -> None:
         """Download data if needed. Lightning ensures that `self.prepare_data()` is called only
@@ -120,7 +120,6 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             num_workers=self.hparams.num_workers,
             collate_fn=self._map_dataset,
             pin_memory=self.hparams.pin_memory,
-            persistent_workers=True,
         )
 
         return data_loader
