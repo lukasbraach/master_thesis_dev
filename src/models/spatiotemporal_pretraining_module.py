@@ -18,7 +18,7 @@ class SpatiotemporalPretrainingModule(LightningModule):
             scheduler: torch.optim.lr_scheduler
     ):
         super().__init__()
-        
+
         self.encoder = encoder
         self.decoder = decoder
         self.optimizer = optimizer
@@ -30,27 +30,28 @@ class SpatiotemporalPretrainingModule(LightningModule):
         return self.encoder(pixel_values)
 
     def mask_and_forward(self, pixel_values):
-        encoded_features = self.encoder(pixel_values)
-        masked_encoded_features, mask = mask_latents(encoded_features)
-        reconstructed_latents = self.decoder(masked_encoded_features, encoded_features, mask)
-        return reconstructed_latents, mask
+        masked_pixel_values, mask = mask_frames(pixel_values)
+        encoded_features = self.encoder(masked_pixel_values)
+        memory = encoded_features  # Memory in this context is the output of the encoder
+        reconstructed_frames = self.decoder(encoded_features, memory, mask)
+        return reconstructed_frames, mask
 
     def training_step(self, batch, batch_idx):
-        pixel_values = batch['pixel_values']
-        reconstructed_latents, mask = self.mask_and_forward(pixel_values)
-        loss = self.compute_loss(reconstructed_latents, pixel_values, mask)
+        pixel_values = batch['input_values']
+        reconstructed_frames, mask = self.mask_and_forward(pixel_values)
+        loss = self.compute_loss(reconstructed_frames, pixel_values, mask)
         self.log("train/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
-        pixel_values = batch['pixel_values']
-        reconstructed_latents, mask = self.mask_and_forward(pixel_values)
-        loss = self.compute_loss(reconstructed_latents, pixel_values, mask)
+        pixel_values = batch['input_values']
+        reconstructed_frames, mask = self.mask_and_forward(pixel_values)
+        loss = self.compute_loss(reconstructed_frames, pixel_values, mask)
         self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
 
-    def compute_loss(self, reconstructed_latents, original_latents, mask):
+    def compute_loss(self, reconstructed_frames, original_frames, mask):
         mse_loss = nn.MSELoss()
-        return mse_loss(reconstructed_latents[mask], original_latents[mask])
+        return mse_loss(reconstructed_frames[mask], original_frames[mask])
 
     def configure_optimizers(self) -> Dict[str, Any]:
         """
@@ -77,23 +78,24 @@ class SpatiotemporalPretrainingModule(LightningModule):
         return {"optimizer": optimizer}
 
 
-def mask_latents(latents, mask_ratio=0.3):
+def mask_frames(frames, mask_ratio=0.3):
     """
-    Randomly mask latent representations with the specified mask ratio.
+    Randomly mask frames with the specified mask ratio.
     Args:
-        latents (torch.Tensor): Latent representations of shape (batch_size, num_latents, hidden_size).
-        mask_ratio (float): Proportion of latents to mask.
+        frames (torch.Tensor): Input video frames of shape (batch_size, num_frames, height, width, channels).
+        mask_ratio (float): Proportion of frames to mask.
 
     Returns:
-        masked_latents (torch.Tensor): Latent representations with some masked out.
-        mask (torch.Tensor): Boolean tensor indicating which latents were masked.
+        masked_frames (torch.Tensor): Frames with some masked out.
+        mask (torch.Tensor): Boolean tensor indicating which frames were masked.
     """
-    batch_size, num_latents, hidden_size = latents.shape
-    mask = torch.rand(batch_size, num_latents) < mask_ratio
-    masked_latents = latents.clone()
-    masked_latents[mask] = 0  # Mask out the latents
+    batch_size, num_frames, height, width, channels = frames.shape
 
-    return masked_latents, mask
+    mask = torch.rand(batch_size, num_frames) < mask_ratio
+    masked_frames = frames.clone()
+    masked_frames[mask] = 0  # Mask out the frames
+
+    return masked_frames, mask
 
 
 if __name__ == "__main__":
