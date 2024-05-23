@@ -92,51 +92,55 @@ def download_file(url, dest_path):
                 bar.update(len(chunk))
 
 
+def download_individual_id(video_id, dest_dir):
+    print(f"Processing video ID: {video_id}")
+
+    try:
+        download_urls = get_download_links(video_id)
+
+        video_path = os.path.join(dest_dir, f"{video_id}.mp4")
+        srt_path = os.path.join(dest_dir, f"{video_id}.srt")
+
+        video_url = download_urls['medium'] or download_urls['high']
+        srt_url = download_urls['srt']
+
+        if not video_url or not srt_url:
+            print(f"Skipping video ID {video_id} due to missing video or subtitles.")
+            return
+
+        print(f"Downloading subtitles to {srt_path}")
+        download_file(srt_url, srt_path)
+
+        try:
+            if download_urls['medium']:
+                print(f"Downloading medium quality video to {video_path}")
+                download_file(download_urls['medium'], video_path)
+        except Exception as e:
+            print(f"Downloading medium quality video failed. Falling back to high quality.")
+
+            if download_urls['high']:
+                print(f"Downloading high quality video to {video_path}")
+                download_file(download_urls['high'], video_path)
+
+    except Exception as e:
+        print(f"Failed to process video ID {video_id}: {e}")
+
+        # Clean up partially downloaded files
+        if os.path.exists(video_path):
+            os.remove(video_path)
+        if os.path.exists(srt_path):
+            os.remove(srt_path)
+
+
 def download_videos_from_csv(csv_file, dest_dir):
     if not os.path.exists(dest_dir):
         os.makedirs(dest_dir)
 
     with open(csv_file, 'r') as file:
         reader = csv.DictReader(file)
-        for i, row in enumerate(reader):
+        for row in reader:
             video_id = row['VideoID']
-            print(f"Processing video ID: {video_id}")
-
-            try:
-                download_urls = get_download_links(video_id)
-
-                video_path = os.path.join(dest_dir, f"{video_id}.mp4")
-                srt_path = os.path.join(dest_dir, f"{video_id}.srt")
-
-                video_url = download_urls['medium'] or download_urls['high']
-                srt_url = download_urls['srt']
-
-                if not video_url or not srt_url:
-                    print(f"Skipping video ID {video_id} due to missing video or subtitles.")
-                    continue
-
-                print(f"Downloading subtitles to {srt_path}")
-                download_file(srt_url, srt_path)
-
-                try:
-                    if download_urls['medium']:
-                        print(f"Downloading medium quality video to {video_path}")
-                        download_file(download_urls['medium'], video_path)
-                except Exception as e:
-                    print(f"Downloading medium quality video failed. Falling back to high quality.")
-
-                    if download_urls['high']:
-                        print(f"Downloading high quality video to {video_path}")
-                        download_file(download_urls['medium'], video_path)
-
-            except Exception as e:
-                print(f"Failed to process video ID {video_id}: {e}")
-
-                # Clean up partially downloaded files
-                if os.path.exists(video_path):
-                    os.remove(video_path)
-                if os.path.exists(srt_path):
-                    os.remove(srt_path)
+            download_individual_id(video_id, dest_dir)
 
 
 if __name__ == "__main__":
