@@ -29,6 +29,7 @@ import requests
 import csv
 import os
 from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 def get_download_links(video_id):
@@ -132,19 +133,27 @@ def download_individual_id(video_id, dest_dir):
             os.remove(srt_path)
 
 
-def download_videos_from_csv(csv_file, dest_dir):
+def download_videos_from_csv(csv_file, dest_dir, max_workers=4):
     if not os.path.exists(dest_dir):
         os.makedirs(dest_dir)
 
     with open(csv_file, 'r') as file:
         reader = csv.DictReader(file)
-        for row in reader:
-            video_id = row['VideoID']
-            download_individual_id(video_id, dest_dir)
+        video_ids = [row['VideoID'] for row in reader]
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [executor.submit(download_individual_id, video_id, dest_dir) for video_id in video_ids]
+
+        for future in as_completed(futures):
+            try:
+                future.result()
+            except Exception as e:
+                print(f"Exception occurred: {e}")
 
 
 if __name__ == "__main__":
     csv_file = 'video_ids.csv'  # Path to your CSV file with video IDs
     dest_dir = 'raw'  # Directory to save downloaded videos and subtitles
-    download_videos_from_csv(csv_file, dest_dir)
+    max_workers = 4  # Number of threads to use for downloading
+    download_videos_from_csv(csv_file, dest_dir, max_workers)
     print("Download process completed.")
