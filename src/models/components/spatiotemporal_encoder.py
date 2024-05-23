@@ -14,6 +14,7 @@ class SpatiotemporalEncoderConfig(Wav2Vec2Config):
                  num_attention_heads: int = 8,
                  num_hidden_layers: int = 12,
                  mask_time_length: int = 1,
+                 image_size: tuple = (224, 224, 3),  # (H, W, C)
                  hidden_act="gelu",
                  freeze_feature_extractor=True,
                  **kwargs
@@ -29,6 +30,7 @@ class SpatiotemporalEncoderConfig(Wav2Vec2Config):
             **kwargs
         )
 
+        self.image_size = image_size
         self.freeze_feature_extractor = freeze_feature_extractor
 
 

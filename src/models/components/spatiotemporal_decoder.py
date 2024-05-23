@@ -4,7 +4,7 @@ from src.models.components.spatiotemporal_encoder import SpatiotemporalEncoderCo
 
 
 class SpatiotemporalDecoder(nn.Module):
-    def __init__(self, config: SpatiotemporalEncoderConfig, image_size: tuple):
+    def __init__(self, config: SpatiotemporalEncoderConfig):
         super().__init__()
         decoder_layer = nn.TransformerDecoderLayer(
             d_model=config.hidden_size,
@@ -14,14 +14,15 @@ class SpatiotemporalDecoder(nn.Module):
             activation=config.hidden_act
         )
 
-        self.image_size = image_size
+        self.config = config
+
         self.decoder = nn.TransformerDecoder(decoder_layer, num_layers=config.num_hidden_layers)
         self.fc_out = nn.Linear(config.hidden_size,
-                                image_size[0] * image_size[1] * image_size[2])  # Assuming image_size is (H, W, C)
+                                config.image_size[0] * config.image_size[1] * config.image_size[2])  # Assuming image_size is (H, W, C)
 
     def forward(self, encoded_features, memory, mask=None):
         decoded_features = self.decoder(encoded_features, memory, tgt_mask=mask)
         reconstructed_frames = self.fc_out(decoded_features)
         batch_size, num_frames, _ = reconstructed_frames.shape
-        reconstructed_frames = reconstructed_frames.view(batch_size, num_frames, *self.image_size)
+        reconstructed_frames = reconstructed_frames.view(batch_size, num_frames, *self.config.image_size)
         return reconstructed_frames

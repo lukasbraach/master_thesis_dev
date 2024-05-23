@@ -89,7 +89,7 @@ def mask_frames(frames, mask_ratio=0.3):
         masked_frames (torch.Tensor): Frames with some masked out.
         mask (torch.Tensor): Boolean tensor indicating which frames were masked.
     """
-    batch_size, num_frames, height, width, channels = frames.shape
+    batch_size, num_frames, channels, height, width = frames.shape
 
     mask = torch.rand(batch_size, num_frames) < mask_ratio
     masked_frames = frames.clone()
