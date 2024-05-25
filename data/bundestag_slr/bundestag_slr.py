@@ -6,10 +6,13 @@ import numpy as np
 import pandas as pd
 from datasets import Sequence, Array3D, Value
 
+base_url = "https://huggingface.co/datasets/lukasbraach/bundestag_slr/raw/main"
+
 
 def read_non_empty_lines(file_path):
-    with open(file_path, 'r') as file:
+    with open(file_path) as file:
         lines = [line.strip() for line in file if line.strip()]
+
     return lines
 
 
@@ -50,7 +53,7 @@ class BundestagSLR(datasets.GeneratorBasedBuilder):
         frames = {}
         other_data = {}
 
-        data_csv = dl_manager.download("video_ids.txt")
+        data_csv = dl_manager.download(f"{base_url}/video_ids.txt")
         df = pd.read_csv(data_csv, header=None, names=['id'])
 
         video_ids_all = df['id']
@@ -66,15 +69,10 @@ class BundestagSLR(datasets.GeneratorBasedBuilder):
             datasets.Split.VALIDATION,
             datasets.Split.TEST,
         ]:
-            video_subtitles = dl_manager.download([
-                f"videos/{id}/subtitles.txt"
+            subtitle_files_split = dl_manager.download([
+                f"{base_url}/videos/{id}/subtitles.txt"
                 for id in video_ids[split]
             ])
-
-            subtitle_files_split = [
-                dl_manager.iter_files(url)
-                for url in video_subtitles
-            ]
 
             video_file_names_split = []
             video_subtitles_split = []
@@ -83,14 +81,11 @@ class BundestagSLR(datasets.GeneratorBasedBuilder):
             for idx, subtitle_file in zip(video_ids[split], subtitle_files_split):
                 lines = read_non_empty_lines(subtitle_file)
 
-                for i, subtitle_line in enumerate(lines):
-                    video_file_name = f"videos/{idx}/{i}.mp4"
+                video_file_names = [f"{base_url}/videos/{idx}/{i}.mp4" for i in range(len(lines))]
+                video_file_names_split.extend(video_file_names)
+                video_subtitles_split.extend(lines)
 
-                    video_file_names_split.append(video_file_name)
-                    video_frames_split.append(
-                        dl_manager.download(video_file_name)
-                    )
-                    video_subtitles_split.append(subtitle_line)
+                video_frames_split.extend(dl_manager.download(video_file_names))
 
             other_data_split = {}
 
