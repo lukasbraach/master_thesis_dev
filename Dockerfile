@@ -8,6 +8,8 @@ WORKDIR /app
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
+RUN pip3 install torch torchvision torchaudio
+
 # Copy the rest of your application's code into the container
 COPY . /app
 

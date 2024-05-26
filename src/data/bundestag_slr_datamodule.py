@@ -80,7 +80,7 @@ class BundestagSLRDataModule(LightningDataModule):
             self.batch_size_per_device = self.hparams.batch_size // self.trainer.world_size
 
     def _map_dataset(self, batch):
-        transcription = [ex['transcription'] for ex in batch]
+        transcription = [ex['subtitle'] for ex in batch]
 
         labels = self.tokenizer(
             transcription,
