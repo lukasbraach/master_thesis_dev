@@ -4,9 +4,9 @@ import cv2
 import datasets
 import numpy as np
 import pandas as pd
-from datasets import Sequence, Array3D, Value
+from datasets import Sequence, Image, Value
 
-base_url = "https://huggingface.co/datasets/lukasbraach/bundestag_slr/raw/main"
+base_url = "."
 
 
 def read_non_empty_lines(file_path):
@@ -39,7 +39,7 @@ class BundestagSLR(datasets.GeneratorBasedBuilder):
         features_dict = {
             "id": Value("string"),
             "subtitle": Value("string"),
-            "frames": Sequence(Array3D(shape=(224, 224, 3), dtype="uint8")),
+            "frames": Sequence(Image()),
         }
 
         return datasets.DatasetInfo(
