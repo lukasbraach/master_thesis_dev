@@ -8,11 +8,8 @@ WORKDIR /app
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install PyTorch Lightning
-RUN pip install --no-cache-dir pytorch-lightning
-
 # Copy the rest of your application's code into the container
 COPY . /app
 
 # Command to run when starting the container
-CMD ["python", "src/train.py"]
+ENTRYPOINT ["python", "src/train.py"]

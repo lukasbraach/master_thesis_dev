@@ -1,9 +1,10 @@
-_target_: src.data.rwth_phoenix_2014_datamodule.RWTHPhoenix2014DataModule
+_target_: src.data.bundestag_slr_datamodule.BundestagSLRDataModule
 
 batch_size: ${trainer.devices} # Needs to be divisible by the number of devices (e.g., if in a distributed setup)
-num_workers: 0
+num_workers: 16
 pin_memory: True
-max_frame_seq_length: 64
+streaming: False
+max_frame_seq_length: 96
 
 tokenizer:
   _target_: transformers.PreTrainedTokenizerFast
@@ -17,4 +18,4 @@ tokenizer:
 
 pre_processor:
   _target_: src.models.components.feature_extractor_dinov2.SignLanguageFeatureExtractor
-  return_every_nth_element: 2 # approx. 12 fps
+  return_every_nth_element: 1 # approx. 12 fps
