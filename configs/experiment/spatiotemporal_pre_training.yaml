@@ -12,7 +12,7 @@ defaults:
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
 
-tags: ["sign_language", "rwth_phoenix"]
+tags: ["sign_language", "bundestag_slr", "pre_training"]
 
 seed: 12345
 
