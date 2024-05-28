@@ -5,20 +5,22 @@ import cv2
 import pandas as pd
 
 
+out_dir = 'videos'
+
 def process_video(video_id) -> typing.List[dict]:
     video_dir = os.path.join('videos_processed', video_id)
     if not os.path.isdir(video_dir):
         print(f"Directory {video_dir} does not exist, skipping.")
         return []
 
-    merged_video_path = os.path.join(video_dir, '../', f'{video_id}.mp4')
+    merged_video_path = os.path.join(out_dir, f'{video_id}.mp4')
     if os.path.exists(merged_video_path):
         print(f"Video {merged_video_path} already exists, skipping.")
         return []
 
     out: cv2.VideoWriter = None
 
-    subtitle_file = os.path.join(video_dir, 'subtitle.txt')
+    subtitle_file = os.path.join(video_dir, 'subtitles.txt')
     with open(subtitle_file, 'r') as f:
         subtitles = f.readlines()
 
