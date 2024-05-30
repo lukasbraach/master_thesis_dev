@@ -1,11 +1,9 @@
 from typing import Any, Dict, Optional, Union
 
 import datasets
-import transformers
 from datasets import IterableDataset, Dataset
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader
-from transformers import PreTrainedTokenizerFast, PreTrainedTokenizer, SequenceFeatureExtractor
 
 from src.models.components.feature_extractor_dinov2 import SignLanguageFeatureExtractor
 
@@ -13,14 +11,12 @@ from src.models.components.feature_extractor_dinov2 import SignLanguageFeatureEx
 class BundestagSLRDataModule(LightningDataModule):
     def __init__(
             self,
-            tokenizer: Union[PreTrainedTokenizer, PreTrainedTokenizerFast],
             pre_processor: SignLanguageFeatureExtractor = SignLanguageFeatureExtractor(),
+            dataset_source='lukasbraach/bundestag_slr',
             batch_size: int = 1,
-            num_workers: int = 32,
+            num_workers: int = 16,
             max_frame_seq_length: int = None,
-            streaming=True,
             pin_memory=False,
-            variant='multisigner',
     ) -> None:
         super().__init__()
 
@@ -30,22 +26,12 @@ class BundestagSLRDataModule(LightningDataModule):
 
         # initialized in setup function.
         self.pre_processor = pre_processor
-        self.tokenizer = tokenizer
 
         self.dataset = datasets.load_dataset(
-            'lukasbraach/bundestag_slr',
-            variant,
+            dataset_source,
             trust_remote_code=True,
-            streaming=streaming,
-            num_proc=num_workers if not streaming else None,
+            streaming=True,
         )
-
-        if variant == 'pre-training':
-            self.tokenizer.pad_token = self.tokenizer.eos_token
-            self.collator = transformers.DataCollatorForLanguageModeling(
-                tokenizer=self.tokenizer,
-                mlm=False,
-            )
 
         self.batch_size_per_device = batch_size
         self.max_frame_seq_length = max_frame_seq_length
@@ -80,21 +66,6 @@ class BundestagSLRDataModule(LightningDataModule):
             self.batch_size_per_device = self.hparams.batch_size // self.trainer.world_size
 
     def _map_dataset(self, batch):
-        transcription = [ex['subtitle'] for ex in batch]
-
-        labels = self.tokenizer(
-            transcription,
-            padding=self.batch_size_per_device > 1,
-            return_tensors='pt',
-            return_length=True,
-            return_attention_mask=False,
-        )
-
-        if self.hparams.variant == 'pre-training':
-            collated = self.collator(labels.input_ids)
-
-            return collated
-
         feature = self.pre_processor(
             [ex['frames'] for ex in batch],
             sampling_rate=25,
@@ -107,7 +78,6 @@ class BundestagSLRDataModule(LightningDataModule):
         result = {
             'input_values': feature.input_values,
             'attention_mask': feature.attention_mask if self.batch_size_per_device > 1 else None,
-            'labels': labels.input_ids,
             'ids': [ex['id'] for ex in batch],
         }
 
