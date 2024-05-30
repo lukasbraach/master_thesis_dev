@@ -4,29 +4,9 @@ import cv2
 import datasets
 import numpy as np
 import pandas as pd
-from datasets import Sequence, Image, Value
+from datasets import Sequence, Array3D, Value
 
 base_url = "."
-
-
-def read_non_empty_lines(file_path):
-    with open(file_path) as file:
-        lines = [line.strip() for line in file if line.strip()]
-
-    return lines
-
-
-def load_video(video_path):
-    """Load video and return frames as a list of arrays."""
-    cap = cv2.VideoCapture(video_path)
-    frames = []
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break
-        frames.append(frame)
-    cap.release()
-    return np.array(frames)
 
 
 class BundestagSLR(datasets.GeneratorBasedBuilder):
@@ -39,7 +19,7 @@ class BundestagSLR(datasets.GeneratorBasedBuilder):
         features_dict = {
             "id": Value("string"),
             "subtitle": Value("string"),
-            "frames": Sequence(Image()),
+            "frames": Sequence(Array3D(shape=(3, 224, 224), dtype="uint8")),
         }
 
         return datasets.DatasetInfo(
@@ -53,10 +33,10 @@ class BundestagSLR(datasets.GeneratorBasedBuilder):
         frames = {}
         other_data = {}
 
-        data_csv = dl_manager.download(f"{base_url}/video_ids.txt")
-        df = pd.read_csv(data_csv, header=None, names=['id'])
+        data_csv = dl_manager.download(f"{base_url}/metadata.csv")
+        df = pd.read_csv(data_csv, sep=",")
 
-        video_ids_all = df['id']
+        video_ids_all = df['VideoID'].unique().tolist()
 
         video_ids = {
             datasets.Split.TRAIN: video_ids_all[:int(len(video_ids_all) * 0.8)],
@@ -69,31 +49,26 @@ class BundestagSLR(datasets.GeneratorBasedBuilder):
             datasets.Split.VALIDATION,
             datasets.Split.TEST,
         ]:
-            subtitle_files_split = dl_manager.download([
-                f"{base_url}/videos/{id}/subtitles.txt"
-                for id in video_ids[split]
-            ])
-
-            video_file_names_split = []
-            video_subtitles_split = []
             video_frames_split = []
-
-            for idx, subtitle_file in zip(video_ids[split], subtitle_files_split):
-                lines = read_non_empty_lines(subtitle_file)
-
-                video_file_names = [f"{base_url}/videos/{idx}/{i}.mp4" for i in range(len(lines))]
-                video_file_names_split.extend(video_file_names)
-                video_subtitles_split.extend(lines)
-
-                video_frames_split.extend(dl_manager.download(video_file_names))
-
             other_data_split = {}
 
-            for video, file_name, subtitle, in zip(video_frames_split, video_file_names_split, video_subtitles_split):
-                other_data_split[video] = {
-                    "id": file_name,
-                    "subtitle": subtitle,
-                }
+            for idx in video_ids[split]:
+                video_file_name = f"{base_url}/videos/{idx}.mp4"
+                video = dl_manager.download(video_file_name)
+                video_frames_split.append(video)
+
+                video_examples = df[df['VideoID'] == idx]
+                video_other_data = []
+
+                for _, row in video_examples.iterrows():
+                    video_other_data.append({
+                        "id": idx,
+                        "subtitle_line": row['SubtitleLine'],
+                        "start_frame": int(row['StartFrame']),
+                        "end_frame": int(row['EndFrame']),
+                    })
+
+                other_data_split[video] = video_other_data
 
             other_data[split] = other_data_split
             frames[split] = video_frames_split
@@ -113,7 +88,7 @@ class BundestagSLR(datasets.GeneratorBasedBuilder):
             ]
         ]
 
-    def _generate_examples(self, videos: List[dict], other_data: Dict[dict, dict]):
+    def _generate_examples(self, videos: List[any], other_data: Dict[dict, List[dict]]):
         """
         _generate_examples generates examples for the HuggingFace dataset.
         It takes a list of frame_archives and the corresponding dict of other data.
@@ -122,13 +97,52 @@ class BundestagSLR(datasets.GeneratorBasedBuilder):
         :param frame_archives: list of ArchiveIterables
         :param other_data: Dict from ArchiveIterables to other data
         """
-        for key, frames in enumerate(videos):
-            ex = other_data[frames]
+        for key, video_path in enumerate(videos):
+            examples = other_data[video_path]
 
-            result = {
-                "id": ex['id'],
-                "subtitle": ex['subtitle'],
-                "frames": load_video(frames),
-            }
+            if len(examples) == 0:
+                # no examples for this video, don't bother reading it
+                continue
 
-            yield key, result
+            cap = cv2.VideoCapture(video_path)
+
+            current_read_frames = 0
+            current_example_idx = 0
+            frames = None
+
+            while cap.isOpened():
+                ret, frame = cap.read()
+                if not ret:
+                    break
+
+                current_read_frames += 1
+                ex = examples[current_example_idx]
+
+                if current_read_frames < ex['start_frame']:
+                    # skip until the start frame
+                    continue
+
+                if frames is None:
+                    # initialize the frames numpy array to the final size
+                    frames = np.ndarray((ex['end_frame'] - ex['start_frame'], *frame.shape))
+
+                # save the read frame to the frames array
+                frames[current_read_frames - ex['start_frame'] - 1] = frame
+
+                if current_read_frames == ex['end_frame']:
+                    # frames list is complete, yield the example
+
+                    yield key, {
+                        "id": ex['id'],
+                        "subtitle": ex['subtitle_line'],
+                        "frames": frames,
+                    }
+
+                    frames = None
+                    current_example_idx += 1
+
+                    if current_example_idx >= len(examples):
+                        # no more examples.
+                        break
+
+            cap.release()
