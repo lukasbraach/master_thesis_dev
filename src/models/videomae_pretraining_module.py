@@ -2,12 +2,8 @@ from typing import Dict, Any
 
 import torch
 from lightning import LightningModule
-from torch import nn
 from torchmetrics import MeanMetric
 from transformers import VideoMAEForPreTraining, VideoMAEImageProcessor
-
-from src.models.components.spatiotemporal_decoder import SpatiotemporalDecoder
-from src.models.components.spatiotemporal_encoder import SpatiotemporalEncoder
 
 
 class VideoMAEPretrainingModule(LightningModule):
@@ -29,9 +25,8 @@ class VideoMAEPretrainingModule(LightningModule):
     def forward(self, pixel_values, bool_masked_pos=None):
         return self.model(pixel_values, bool_masked_pos=bool_masked_pos)
 
-
     def mask_and_forward(self, pixel_values):
-        bool_masked_pos = torch.randint(0, 2, (1, 96)).bool()
+        bool_masked_pos = torch.randint(0, 2, (pixel_values.shape[0], pixel_values.shape[1])).bool()
         outputs = self.forward(pixel_values, bool_masked_pos=bool_masked_pos)
 
         return outputs, bool_masked_pos
@@ -73,7 +68,6 @@ class VideoMAEPretrainingModule(LightningModule):
                 },
             }
         return {"optimizer": optimizer}
-
 
 
 if __name__ == "__main__":

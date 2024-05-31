@@ -1,0 +1,16 @@
+defaults:
+  - _self_
+
+_target_: src.models.videomae_pretraining_module.VideoMAEPretrainingModule
+
+optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 2e-5
+
+scheduler:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _partial_: true
+  mode: min
+  factor: 0.1
+  patience: 10
