@@ -112,7 +112,13 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
 
     def _map_dataset(self, batch):
         # expecting pixel_values to be of shape (batch_size, num_frames, 3, 224, 224)
-        pixel_values = prepare_data_for_preprocess([ex['frames'] for ex in batch])
+        pixel_values = prepare_data_for_preprocess(
+            [
+                # enforce max_frame_seq_length by truncating the frames
+                ex['frames'][:self.max_frame_seq_length]
+                for ex in batch
+            ]
+        )
 
         pixel_values = self.pre_processor(
             pixel_values,
@@ -122,7 +128,6 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
             do_rescale=False
         ).pixel_values
 
-        pixel_values = pixel_values[:, :self.max_frame_seq_length, :, :, :]
         mask = create_mask_for(pixel_values)
 
         result = {
@@ -197,4 +202,4 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
 
 
 if __name__ == "__main__":
-    _ = BundestagSLRDataModule()
+    _ = BundestagSLRVideoMAEDataModule()
