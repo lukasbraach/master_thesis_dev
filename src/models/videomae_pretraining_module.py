@@ -24,7 +24,14 @@ class VideoMAEPretrainingModule(LightningModule):
 
     def forward(self, pixel_values, bool_masked_pos=None):
         # expecting pixel_values to be of shape (batch_size, num_frames, 3, 224, 224)
-        pixel_values = self.processor(pixel_values, return_tensors="pt", do_resize=False, do_center_crop=False, do_rescale=False).pixel_values
+        pixel_values = self.processor(
+            pixel_values,
+            input_data_format='channels_first',
+            return_tensors="pt",
+            do_resize=False,
+            do_center_crop=False,
+            do_rescale=False
+        ).pixel_values
         return self.model(pixel_values, bool_masked_pos=bool_masked_pos)
 
     def mask_and_forward(self, pixel_values):
