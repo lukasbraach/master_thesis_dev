@@ -128,6 +128,7 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
             do_rescale=False
         ).pixel_values
 
+        pixel_values = pixel_values.float()
         mask = create_mask_for(pixel_values)
 
         result = {
