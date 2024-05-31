@@ -19,10 +19,15 @@ class SpatiotemporalDecoder(nn.Module):
         self.config = config
 
         self.decoder = nn.TransformerDecoder(decoder_layer, num_layers=int(math.ceil(config.num_hidden_layers / 3)))
+        self.projection_layer = nn.Linear(config.hidden_size, config.hidden_size // 2)
+
         self.fc_out = nn.Linear(config.hidden_size,
                                 config.image_size[0] * config.image_size[1] * config.image_size[2])  # Assuming image_size is (H, W, C)
 
     def forward(self, encoded_features, memory, mask=None):
+        encoded_features = self.projection_layer(encoded_features)
+        memory = self.projection_layer(memory)
+
         decoded_features = self.decoder(encoded_features, memory, tgt_mask=mask)
         reconstructed_frames = self.fc_out(decoded_features)
         batch_size, num_frames, _ = reconstructed_frames.shape
