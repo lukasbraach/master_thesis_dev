@@ -17,13 +17,6 @@ jobs:
       OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_CLI_KEY_CONTENT }}
       OCI_CLI_REGION: ${{ vars.OCI_CLI_REGION }}
     steps:
-      - name: Get or create an OCIR Repository
-        uses: oracle-actions/get-ocir-repository@v1.2.1
-        id: get-ocir-repository
-        with:
-          name: master-thesis-dev
-          compartment: ${{ vars.OCI_COMPARTMENT_OCID }}
-
       - name: Log into OCIR
         uses: oracle-actions/login-ocir@v1.2.1
         id: login-ocir
@@ -33,7 +26,7 @@ jobs:
       - name: Build images
         id: build-image
         env:
-          IMAGE_NAME: ${{ steps.get-ocir-repository.outputs.repo_path }}/training
+          IMAGE_NAME: ${{ vars.OCI_IMAGE }}/training
         run: |
           docker build \
             -t $IMAGE_NAME:latest \
@@ -43,7 +36,7 @@ jobs:
       - name: Tag and push a container image
         id: tag-and-push-image
         env:
-          IMAGE_NAME: ${{ steps.get-ocir-repository.outputs.repo_path }}/training
+          IMAGE_NAME: ${{ vars.OCI_IMAGE }}/training
         run: |
           docker push "$IMAGE_NAME:latest"
           docker push "$IMAGE_NAME:${{ github.ref_name }}"
