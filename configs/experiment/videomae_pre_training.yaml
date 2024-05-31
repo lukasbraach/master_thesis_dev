@@ -4,7 +4,7 @@
 # python train.py experiment=example
 
 defaults:
-  - override /data: bundestag_slr_pretrain
+  - override /data: bundestag_slr_videomae_pretrain
   - override /model: videomae_pretraining_module
   - override /callbacks: default
   - override /trainer: deepspeed
