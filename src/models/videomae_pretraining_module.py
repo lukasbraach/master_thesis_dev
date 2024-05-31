@@ -1,3 +1,4 @@
+import math
 from typing import Dict, Any
 
 import torch
@@ -22,12 +23,6 @@ def prepare_data_for_preprocess(pixel_values: torch.Tensor):
     return batches
 
 
-def calculate_num_patches(height, width, patch_size):
-    num_patches_height = height // patch_size
-    num_patches_width = width // patch_size
-    return num_patches_height * num_patches_width
-
-
 class VideoMAEPretrainingModule(LightningModule):
     def __init__(
             self,
@@ -43,6 +38,31 @@ class VideoMAEPretrainingModule(LightningModule):
         self.scheduler = scheduler
         self.train_loss = MeanMetric()
         self.val_loss = MeanMetric()
+
+    def _create_mask_for(self, pixel_values: torch.Tensor) -> torch.Tensor:
+        '''
+        Create mask for the pixel_values
+        Args:
+            pixel_values: (batch_size, seq_length, 3, 224, 224)
+
+        Returns: mask tensor of shape (batch_size, seq_length)
+        '''
+
+        # patch logic can be found in example:
+        # https://huggingface.co/docs/transformers/main/en/model_doc/videomae#transformers.VideoMAEForPreTraining.forward.example
+
+        batch_size, num_frames, channels, height, width = pixel_values.shape
+
+        num_patches_per_frame = (self.model.config.image_size // self.model.config.patch_size) ** 2
+        seq_length = (num_frames // self.model.config.tubelet_size) * num_patches_per_frame
+        mask_num = math.ceil(seq_length * 0.3)
+
+        mask = torch.zeros((batch_size, seq_length)).bool()
+        for i in range(batch_size):
+            perm = torch.randperm(seq_length)[:mask_num]
+            mask[i][perm] = True
+
+        return mask
 
     def forward(self, pixel_values, bool_masked_pos=None):
         return self.model(pixel_values, bool_masked_pos=bool_masked_pos)
@@ -60,14 +80,8 @@ class VideoMAEPretrainingModule(LightningModule):
         ).pixel_values
         pixel_values = pixel_values.to(self.device)
 
-        batch_size, num_frames, channels, height, width = pixel_values.shape
         print(f"pixel_values.shape: {pixel_values.shape}")
-
-        # patch logic can be found in example https://huggingface.co/docs/transformers/main/en/model_doc/videomae#transformers.VideoMAEForPreTraining.forward.example
-        num_patches_per_frame = calculate_num_patches(height, width, self.model.config.patch_size)
-        seq_length = (num_frames // self.model.config.tubelet_size) * num_patches_per_frame
-        bool_masked_pos = torch.randint(0, 2, (batch_size, seq_length)).bool()
-
+        bool_masked_pos = self._create_mask_for(pixel_values)
         print(f"bool_masked_pos.shape: {bool_masked_pos.shape}")
 
         outputs = self.forward(pixel_values, bool_masked_pos=bool_masked_pos)
