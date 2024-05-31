@@ -55,6 +55,10 @@ class VideoMAEPretrainingModule(LightningModule):
 
         num_patches_per_frame = (self.model.config.image_size // self.model.config.patch_size) ** 2
         seq_length = (num_frames // self.model.config.tubelet_size) * num_patches_per_frame
+
+        # The amount of masked tokens is set to 30% of the sequence length
+        # and must be the same for all sequences in the batch.
+        # See: https://discuss.huggingface.co/t/videomae-pretrain-batch-masking/22176/7
         mask_num = math.ceil(seq_length * 0.3)
 
         mask = torch.zeros((batch_size, seq_length)).bool()
