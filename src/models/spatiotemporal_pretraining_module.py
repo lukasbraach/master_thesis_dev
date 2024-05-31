@@ -8,6 +8,9 @@ from torchmetrics import MeanMetric
 from src.models.components.spatiotemporal_decoder import SpatiotemporalDecoder
 from src.models.components.spatiotemporal_encoder import SpatiotemporalEncoder
 
+# Faster training on Ampere cards...
+torch.backends.cuda.matmul.allow_tf32 = True
+torch.set_float32_matmul_precision('high')
 
 class SpatiotemporalPretrainingModule(LightningModule):
     def __init__(

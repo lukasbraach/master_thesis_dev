@@ -6,6 +6,10 @@ from torchmetrics import MeanMetric
 from transformers import VideoMAEForPreTraining, VideoMAEImageProcessor
 
 
+# Faster training on Ampere cards...
+torch.backends.cuda.matmul.allow_tf32 = True
+torch.set_float32_matmul_precision('high')
+
 def prepare_data_for_preprocess(pixel_values: torch.Tensor):
     batches = [
         [
@@ -45,6 +49,7 @@ class VideoMAEPretrainingModule(LightningModule):
             do_center_crop=False,
             do_rescale=False
         ).pixel_values
+        pixel_values = pixel_values.half()  # Convert input to half precision
 
         return self.model(pixel_values, bool_masked_pos=bool_masked_pos)
 
