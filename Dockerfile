@@ -9,8 +9,8 @@ RUN apt-get update && apt-get install ffmpeg libsm6 libxext6 htop nload git git-
 RUN git lfs install
 
 # Copy the requirements file and install dependencies
-COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt /workspace/code/requirements.txt
+RUN pip install --no-cache-dir -r /workspace/code/requirements.txt
 
 # Copy the rest of your application's code into the container
 COPY . /workspace/code
