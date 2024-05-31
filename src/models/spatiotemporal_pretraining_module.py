@@ -27,11 +27,11 @@ class SpatiotemporalPretrainingModule(LightningModule):
         self.val_loss = MeanMetric()
 
     def forward(self, pixel_values):
-        return self.encoder(pixel_values)
+        return self.encoder(pixel_values).last_hidden_state
 
     def mask_and_forward(self, pixel_values):
         masked_pixel_values, mask = mask_frames(pixel_values)
-        encoded_features = self.encoder(masked_pixel_values)
+        encoded_features = self.encoder(masked_pixel_values).last_hidden_state
         memory = encoded_features  # Memory in this context is the output of the encoder
         reconstructed_frames = self.decoder(encoded_features, memory, mask)
         return reconstructed_frames, mask
