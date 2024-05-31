@@ -9,20 +9,20 @@ on:
 jobs:
   get-ocir-repository-test:
     runs-on: ubuntu-22.04
-    name: Get OCIR Repository Test
+    name: Push to OCIR Repository
     env:
-      OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
-      OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
-      OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
+      OCI_CLI_USER: ${{ env.OCI_CLI_USER }}
+      OCI_CLI_TENANCY: ${{ env.OCI_CLI_TENANCY }}
+      OCI_CLI_FINGERPRINT: ${{ env.OCI_CLI_FINGERPRINT }}
       OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_CLI_KEY_CONTENT }}
-      OCI_CLI_REGION: ${{ secrets.OCI_CLI_REGION }}
+      OCI_CLI_REGION: ${{ env.OCI_CLI_REGION }}
     steps:
       - name: Get or create an OCIR Repository
         uses: oracle-actions/get-ocir-repository@v1.2.1
         id: get-ocir-repository
         with:
           name: master-thesis-dev
-          compartment: ${{ secrets.OCI_COMPARTMENT_OCID }}
+          compartment: ${{ env.OCI_COMPARTMENT_OCID }}
 
       - name: Log into OCIR
         uses: oracle-actions/login-ocir@v1.2.1
