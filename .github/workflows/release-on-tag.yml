@@ -25,12 +25,12 @@ jobs:
 
       - name: Log in to Oracle Cloud Container Registry
         run: |
-          docker login -u "${{ secrets.OCI_USER_OCID }}/oracleidentitycloudservice/${{ secrets.OCI_USERNAME }}" -p "${{ secrets.OCI_AUTH_TOKEN }}" ${{ vars.OCI_CLI_REGION }}.ocir.io
+          docker login -u "${{ vars.OCI_TENANCY_NAME }}/oracleidentitycloudservice/${{ vars.OCI_USERNAME }}" -p "${{ secrets.OCI_AUTH_TOKEN }}" ${{ vars.OCI_CLI_REGION }}.ocir.io
 
       - name: Build images
         id: build-image
         env:
-          IMAGE_NAME: ${{vars.OCI_CLI_REGION}}.ocir.io/${{ secrets.OCI_TENANCY_NAME }}/master-thesis-dev/training
+          IMAGE_NAME: ${{vars.OCI_CLI_REGION}}.ocir.io/${{ vars.OCI_TENANCY_NAME }}/master-thesis-dev/training
         run: |
           docker build \
             -t $IMAGE_NAME:latest \
