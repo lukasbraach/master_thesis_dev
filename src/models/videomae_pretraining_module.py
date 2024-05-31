@@ -37,6 +37,7 @@ class VideoMAEPretrainingModule(LightningModule):
         super().__init__()
 
         self.model = VideoMAEForPreTraining.from_pretrained("MCG-NJU/videomae-base")
+        self.processor = VideoMAEImageProcessor.from_pretrained("MCG-NJU/videomae-base")
 
         self.optimizer = optimizer
         self.scheduler = scheduler
