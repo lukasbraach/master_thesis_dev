@@ -6,6 +6,18 @@ from torchmetrics import MeanMetric
 from transformers import VideoMAEForPreTraining, VideoMAEImageProcessor
 
 
+def prepare_data_for_preprocess(pixel_values: torch.Tensor):
+    batches = [
+        [
+            img
+            for img in video
+        ]
+        for video in pixel_values
+    ]
+
+    return batches
+
+
 class VideoMAEPretrainingModule(LightningModule):
     def __init__(
             self,
@@ -24,6 +36,7 @@ class VideoMAEPretrainingModule(LightningModule):
 
     def forward(self, pixel_values, bool_masked_pos=None):
         # expecting pixel_values to be of shape (batch_size, num_frames, 3, 224, 224)
+        pixel_values = prepare_data_for_preprocess(pixel_values)
         pixel_values = self.processor(
             pixel_values,
             input_data_format='channels_first',
@@ -32,6 +45,7 @@ class VideoMAEPretrainingModule(LightningModule):
             do_center_crop=False,
             do_rescale=False
         ).pixel_values
+
         return self.model(pixel_values, bool_masked_pos=bool_masked_pos)
 
     def mask_and_forward(self, pixel_values):
