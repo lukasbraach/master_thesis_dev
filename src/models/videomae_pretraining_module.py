@@ -50,6 +50,7 @@ class VideoMAEPretrainingModule(LightningModule):
             do_rescale=False
         ).pixel_values
         pixel_values = pixel_values.to(self.device)
+        print(f"pixel_values.shape: {pixel_values.shape}")
 
         return self.model(pixel_values, bool_masked_pos=bool_masked_pos)
 
