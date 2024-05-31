@@ -49,6 +49,7 @@ class VideoMAEPretrainingModule(LightningModule):
             do_center_crop=False,
             do_rescale=False
         ).pixel_values
+        pixel_values = pixel_values.to(self.device)
 
         return self.model(pixel_values, bool_masked_pos=bool_masked_pos)
 
