@@ -68,6 +68,8 @@ class VideoMAEPretrainingModule(LightningModule):
         seq_length = (num_frames // self.model.config.tubelet_size) * num_patches_per_frame
         bool_masked_pos = torch.randint(0, 2, (batch_size, seq_length)).bool()
 
+        print(f"bool_masked_pos.shape: {bool_masked_pos.shape}")
+
         outputs = self.forward(pixel_values, bool_masked_pos=bool_masked_pos)
 
         return outputs, bool_masked_pos
