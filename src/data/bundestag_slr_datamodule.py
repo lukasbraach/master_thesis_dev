@@ -73,6 +73,7 @@ class BundestagSLRDataModule(LightningDataModule):
             return_attention_mask=True,
             return_tensors='pt',
             max_length=self.max_frame_seq_length,
+            truncation=True,
         )
 
         result = {
