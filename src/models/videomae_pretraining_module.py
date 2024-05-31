@@ -55,7 +55,13 @@ class VideoMAEPretrainingModule(LightningModule):
         return self.model(pixel_values, bool_masked_pos=bool_masked_pos)
 
     def mask_and_forward(self, pixel_values):
-        bool_masked_pos = torch.randint(0, 2, (pixel_values.shape[0], pixel_values.shape[1])).bool()
+        batch_size, num_frames, channels, image_size, _ = pixel_values.shape
+
+        # patch logic can be found in example https://huggingface.co/docs/transformers/main/en/model_doc/videomae#transformers.VideoMAEForPreTraining.forward.example
+        num_patches_per_frame = (self.model.config.image_size // self.model.config.patch_size) ** 2
+        seq_length = (num_frames // self.model.config.tubelet_size) * num_patches_per_frame
+        bool_masked_pos = torch.randint(0, 2, (batch_size, seq_length)).bool()
+
         outputs = self.forward(pixel_values, bool_masked_pos=bool_masked_pos)
 
         return outputs, bool_masked_pos
