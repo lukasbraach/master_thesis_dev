@@ -18,7 +18,7 @@ RUN wget \
     && rm -f Miniconda3-latest-Linux-x86_64.sh
 
 # Create the conda environment and install dependencies
-RUN conda env create -n master_thesis_dev && \
+RUN conda create -n master_thesis_dev && \
     conda activate master_thesis_dev && \
     conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
 
