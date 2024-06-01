@@ -31,7 +31,7 @@ class CustomVideoMAEForPreTraining(VideoMAEPreTrainedModel):
             self,
             pixel_values: torch.FloatTensor,
             bool_masked_pos: torch.BoolTensor,
-            video_lengths: Optional[torch.LongTensor] = None,
+            video_lengths: Optional[torch.IntTensor] = None,
             head_mask: Optional[torch.Tensor] = None,
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
@@ -43,29 +43,10 @@ class CustomVideoMAEForPreTraining(VideoMAEPreTrainedModel):
             batch must have the same number of masked patches. Sequence length is `(num_frames // tubelet_size) *
             (image_size // patch_size) ** 2`.
 
-        Returns:
+        video_lengths (`torch.IntTensor` of shape `(batch_size,)`, `optional`):
+            Used to mask the padding frames in the video. If provided, the loss is only calculated for the non-padded.
 
-        Examples:
-        ```python
-        >>> from transformers import AutoImageProcessor, VideoMAEForPreTraining
-        >>> import numpy as np
-        >>> import torch
-
-        >>> num_frames = 16
-        >>> video = list(np.random.randint(0, 256, (num_frames, 3, 224, 224)))
-
-        >>> image_processor = AutoImageProcessor.from_pretrained("MCG-NJU/videomae-base")
-        >>> model = VideoMAEForPreTraining.from_pretrained("MCG-NJU/videomae-base")
-
-        >>> pixel_values = image_processor(video, return_tensors="pt").pixel_values
-
-        >>> num_patches_per_frame = (model.config.image_size // model.config.patch_size) ** 2
-        >>> seq_length = (num_frames // model.config.tubelet_size) * num_patches_per_frame
-        >>> bool_masked_pos = torch.randint(0, 2, (1, seq_length)).bool()
-
-        >>> outputs = model(pixel_values, bool_masked_pos=bool_masked_pos)
-        >>> loss = outputs.loss
-        ```"""
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.videomae(
