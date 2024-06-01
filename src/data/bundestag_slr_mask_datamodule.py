@@ -74,7 +74,7 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
         seq_length = self._get_seq_length_for(pixel_values)
 
         mean_video_frame_lengths = torch.mean(video_frame_lengths.float())
-        min_video_frame_lengths = torch.min(video_frame_lengths.float())
+        min_video_frame_lengths = torch.min(video_frame_lengths)
 
         # At least the equivalent of 2 frames must be masked
         # for the shortest video in the batch. This is a safeguard
