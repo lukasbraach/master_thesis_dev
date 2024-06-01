@@ -42,7 +42,7 @@ class VideoMAEPretrainingModule(LightningModule):
 
         outputs = self.forward(pixel_values, bool_masked_pos=bool_masked_pos, video_lengths=video_lengths)
 
-        self.log("train/loss", outputs.loss, batch_size=len(batch), on_step=True, on_epoch=True, prog_bar=True)
+        self.log("train/loss", outputs.loss, batch_size=len(pixel_values), on_step=True, on_epoch=True, prog_bar=True)
 
         return outputs.loss
 
@@ -53,7 +53,7 @@ class VideoMAEPretrainingModule(LightningModule):
 
         outputs = self.forward(pixel_values, bool_masked_pos=bool_masked_pos, video_lengths=video_lengths)
 
-        self.log("val/loss", outputs.loss, batch_size=len(batch), on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val/loss", outputs.loss, batch_size=len(pixel_values), on_step=False, on_epoch=True, prog_bar=True)
 
     def configure_optimizers(self) -> Dict[str, Any]:
         """
