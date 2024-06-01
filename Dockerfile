@@ -18,10 +18,13 @@ RUN curl \
     && bash Miniconda3-latest-Linux-x86_64.sh -b \
     && rm -f Miniconda3-latest-Linux-x86_64.sh
 
+# Set the default shell to bash
+SHELL ["/bin/bash", "-c"]
 ENV CONDA_DEFAULT_ENV=master_thesis_dev
 
 # Create the conda environment and install dependencies
 RUN conda init && \
+    source /root/.bashrc && \
     conda create -n master_thesis_dev && \
     conda activate master_thesis_dev && \
     conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
@@ -31,9 +34,6 @@ COPY environment.yml .
 
 RUN conda env update && \
     conda clean -afy
-
-# Set the default shell to bash
-SHELL ["/bin/bash", "-c"]
 
 # Activate the conda environment by default
 RUN echo "conda activate master_thesis_dev" >> ~/.bashrc
