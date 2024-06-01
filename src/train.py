@@ -1,9 +1,10 @@
+import os
+import signal
 from typing import Any, Dict, List, Optional, Tuple
 
 import hydra
 import lightning as L
 import rootutils
-import torch
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig
@@ -37,6 +38,16 @@ from src.utils import (
 )
 
 log = RankedLogger(__name__, rank_zero_only=True)
+
+
+def save_checkpoint_before_exit(trainer: Trainer, path="interrupted_checkpoint.ckpt"):
+    def handler(signum, frame):
+        print("Saving checkpoint before exit...")
+        trainer.save_checkpoint(path)
+        print("Checkpoint saved. Exiting now.")
+        exit(0)
+
+    return handler
 
 
 @task_wrapper
@@ -84,6 +95,14 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
     if cfg.get("train"):
         log.info("Starting training!")
+        # Attach the signal handler
+        signal.signal(
+            signal.SIGINT,
+            save_checkpoint_before_exit(
+                trainer,
+                path=os.path.join(cfg.get("ckpt_path"), "interrupted_checkpoint.ckpt")
+            )
+        )
         trainer.fit(model=model, datamodule=datamodule, ckpt_path=cfg.get("ckpt_path"))
 
     train_metrics = trainer.callback_metrics

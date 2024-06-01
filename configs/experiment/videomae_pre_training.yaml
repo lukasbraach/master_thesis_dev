@@ -29,6 +29,9 @@ trainer:
 data:
   batch_size: 4
 
+paths:
+  log_dir: /data/1braach/logs/
+
 logger:
   wandb:
     tags: ${tags}
