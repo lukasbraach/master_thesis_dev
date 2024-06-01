@@ -100,7 +100,7 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
             signal.SIGINT,
             save_checkpoint_before_exit(
                 trainer,
-                path=os.path.join(cfg.get("ckpt_path"), "interrupted_checkpoint.ckpt")
+                path=os.path.join(cfg.get("paths.output_dir"), "interrupted_checkpoint.ckpt")
             )
         )
         trainer.fit(model=model, datamodule=datamodule, ckpt_path=cfg.get("ckpt_path"))
