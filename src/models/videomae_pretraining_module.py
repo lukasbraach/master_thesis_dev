@@ -33,7 +33,7 @@ class VideoMAEPretrainingModule(LightningModule):
             bool_masked_pos: torch.BoolTensor = None,
             video_lengths: Optional[torch.IntTensor] = None
     ):
-        return self.net(pixel_values, bool_masked_pos=bool_masked_pos)
+        return self.net(pixel_values, bool_masked_pos=bool_masked_pos, video_lengths=video_lengths)
 
     def training_step(self, batch, batch_idx):
         pixel_values = batch['pixel_values']

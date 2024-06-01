@@ -154,11 +154,19 @@ class CustomVideoMAEForPreTraining(VideoMAEPreTrainedModel):
             batch_size, _, num_channels = videos_patch.shape
             labels = videos_patch[bool_masked_pos].reshape(batch_size, -1, num_channels)
 
-        # TODO: first validate if the training even works...
-        # if video_lengths:
-        #     for batch in range(batch_size):
-        #         logits[batch, video_lengths[batch]:, :] = 0
-        #         labels[batch, video_lengths[batch]:, :] = 0
+        if video_lengths:
+            # set the loss to 0 for the padding frames
+            with torch.no_grad():
+                for batch in range(batch_size):
+                    patches_per_frame = bool_masked_pos.shape[1] // seq_len
+                    unmasked_patches = video_lengths[batch] * patches_per_frame
+
+                    # just a random value that leads to a loss of 0
+                    # since it's the same for logits and labels
+                    artificial_same_value = -1
+
+                    logits[batch, unmasked_patches:, :] = artificial_same_value
+                    labels[batch, unmasked_patches:, :] = artificial_same_value
 
         loss_fct = MSELoss()
         loss = loss_fct(logits, labels)
