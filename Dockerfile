@@ -23,9 +23,9 @@ SHELL ["/bin/bash", "-c"]
 ENV CONDA_DEFAULT_ENV=master_thesis_dev
 
 # Create the conda environment and install dependencies
-RUN conda init && \
-    source /root/.bashrc && \
-    conda create -n master_thesis_dev && \
+RUN conda init
+
+RUN conda create -n master_thesis_dev && \
     conda activate master_thesis_dev && \
     conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
 
