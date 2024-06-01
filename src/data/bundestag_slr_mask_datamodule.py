@@ -92,10 +92,7 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
 
         mask = torch.zeros((batch_size, seq_length)).bool()
         for i in range(batch_size):
-            print(f"video_frame_lengths[i]: {video_frame_lengths[i]}")
             video_underlap_frames = num_frames - int(video_frame_lengths[i])
-
-            print(f"video_underlap_frames: {video_underlap_frames}")
 
             # distribute the available masking frames so that the underlapping
             # video frames are always fully masked
