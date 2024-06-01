@@ -3,7 +3,8 @@ from typing import Dict, Any
 import torch
 from lightning import LightningModule
 from torchmetrics import MeanMetric
-from transformers import VideoMAEForPreTraining
+
+from src.models.components.videomae_with_decoder import CustomVideoMAEForPreTraining
 
 # Faster training on Ampere cards...
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -13,12 +14,13 @@ torch.set_float32_matmul_precision('high')
 class VideoMAEPretrainingModule(LightningModule):
     def __init__(
             self,
+            net: CustomVideoMAEForPreTraining,
             optimizer: torch.optim.Optimizer,
             scheduler: torch.optim.lr_scheduler
     ):
         super().__init__()
 
-        self.model = VideoMAEForPreTraining.from_pretrained("MCG-NJU/videomae-base")
+        self.net = net
 
         self.optimizer = optimizer
         self.scheduler = scheduler
@@ -26,7 +28,7 @@ class VideoMAEPretrainingModule(LightningModule):
         self.val_loss = MeanMetric()
 
     def forward(self, pixel_values, bool_masked_pos=None):
-        return self.model(pixel_values, bool_masked_pos=bool_masked_pos)
+        return self.net(pixel_values, bool_masked_pos=bool_masked_pos)
 
     def training_step(self, batch, batch_idx):
         pixel_values = batch['pixel_values']

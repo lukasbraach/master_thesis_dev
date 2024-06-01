@@ -1,8 +1,8 @@
 import math
-import statistics
 from typing import Any, Dict, Optional, Union
 
 import datasets
+import numpy as np
 import torch
 from datasets import IterableDataset, Dataset
 from lightning import LightningDataModule
@@ -50,7 +50,15 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
 
         self.batch_size_per_device = batch_size
 
-    def _create_mask_for(self, pixel_values: torch.Tensor, video_frame_lengths: list[int]) -> torch.Tensor:
+    def _get_seq_length_for(self, pixel_values: torch.Tensor) -> int:
+        batch_size, num_frames, channels, height, width = pixel_values.shape
+
+        num_patches_per_frame = (height // self.hparams.model_patch_size) ** 2
+        seq_length = (num_frames // self.hparams.model_tubelet_size) * num_patches_per_frame
+
+        return seq_length
+
+    def _create_mask_for(self, pixel_values: torch.Tensor, video_frame_lengths: torch.Tensor) -> torch.Tensor:
         '''
         Create mask for the pixel_values
         Args:
@@ -63,18 +71,24 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
         # https://huggingface.co/docs/transformers/main/en/model_doc/videomae#transformers.VideoMAEForPreTraining.forward.example
 
         batch_size, num_frames, channels, height, width = pixel_values.shape
+        seq_length = self._get_seq_length_for(pixel_values)
 
-        num_patches_per_frame = (height // self.hparams.model_patch_size) ** 2
-        seq_length = (num_frames // self.hparams.model_tubelet_size) * num_patches_per_frame
+        mean_video_frame_lengths = torch.mean(video_frame_lengths)
+        min_video_frame_lengths = torch.min(video_frame_lengths)
+
+        # At least the equivalent of 2 frames must be masked
+        # for the shortest video in the batch. This is a safeguard
+        # against edge cases with wildly varying video lengths.
+        min_mask_frames = num_frames - min_video_frame_lengths + 2
+        min_mask_patches = self._get_seq_length_for(pixel_values[0, :min_mask_frames, :, :, :])
 
         # mean relative amount of underlap – meaning that the video
         # frames are not fully filling the num_frames of the batch.
-        mean_video_frame_lengths = statistics.fmean(video_frame_lengths)
         mean_relative_video_underlap = 1 - mean_video_frame_lengths / num_frames
 
         # The amount of masked tokens must be the same for all sequences in the batch.
         # See: https://discuss.huggingface.co/t/videomae-pretrain-batch-masking/22176/7
-        mask_num = min(math.ceil(seq_length * (0.3 + mean_relative_video_underlap)), )
+        mask_num = max(math.ceil(seq_length * (0.3 + mean_relative_video_underlap)), min_mask_patches)
 
         mask = torch.zeros((batch_size, seq_length)).bool()
         for i in range(batch_size):
@@ -82,7 +96,7 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
 
             # distribute the available masking frames so that the underlapping
             # video frames are always fully masked
-            perm = torch.randperm(video_frame_lengths[i])[:mask_num - video_underlap_frames]
+            perm = torch.randperm(int(video_frame_lengths[i]))[:mask_num - video_underlap_frames]
             mask[i][perm] = True
             mask[i][-video_underlap_frames:] = True
 
@@ -127,7 +141,7 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
                 for ex in batch
             ]
         )
-        seq_lengths = [len(video) for video in pixel_values]
+        video_lengths = np.ndarray([len(video) for video in pixel_values])
 
         pixel_values = self.pre_processor(
             pixel_values,
@@ -138,10 +152,13 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
         ).pixel_values
 
         pixel_values = torch.tensor(pixel_values, dtype=torch.float32)
-        mask = self._create_mask_for(pixel_values, seq_lengths)
+        video_lengths = torch.tensor(video_lengths, dtype=torch.int)
+
+        mask = self._create_mask_for(pixel_values, video_lengths)
 
         result = {
             'pixel_values': pixel_values,
+            'video_lengths': video_lengths,
             'attention_mask': mask,
             'ids': [ex['id'] for ex in batch],
         }
