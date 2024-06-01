@@ -1,11 +1,11 @@
-# reasons you might want to use `environment.yaml` instead of `requirements.txt`:
+# reasons you might want to use `environment.yml` instead of `requirements.txt`:
 # - pip installs packages in a loop, without ensuring dependencies across all packages
 #   are fulfilled simultaneously, but conda achieves proper dependency control across
 #   all packages
 # - conda allows for installing packages without requiring certain compilers or
 #   libraries to be available in the system, since it installs precompiled binaries
 
-name: master_thesis
+name: master_thesis_dev
 
 channels:
   - pytorch
@@ -30,6 +30,20 @@ dependencies:
   - rich=13.*
   - pre-commit=3.*
   - pytest=7.*
+  - huggingface_hub[cli]
+  - datasets
+  - transformers
+  - accelerate
+  - tokenizers
+  - optimum
+  - fairscale
+  - opencv
+  - av
+  - numpy
+  - omegaconf
+  - pillow
+  - packaging
+  - setuptools
 
   # --------- loggers --------- #
   - wandb
@@ -44,3 +58,6 @@ dependencies:
       - hydra-colorlog
       - rootutils
       - lsfb_dataset
+      - mediapipe
+      - jupyter
+      - sh
