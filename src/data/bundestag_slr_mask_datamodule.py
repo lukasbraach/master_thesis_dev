@@ -58,7 +58,7 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
 
         return seq_length
 
-    def _create_mask_for(self, pixel_values: torch.Tensor, video_frame_lengths: torch.Tensor) -> torch.Tensor:
+    def _create_mask_for(self, pixel_values: torch.Tensor, video_frame_lengths: torch.IntTensor) -> torch.Tensor:
         '''
         Create mask for the pixel_values
         Args:
@@ -79,12 +79,12 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
         # At least the equivalent of 2 frames must be masked
         # for the shortest video in the batch. This is a safeguard
         # against edge cases with wildly varying video lengths.
-        min_mask_frames = int(num_frames - min_video_frame_lengths + 2)
+        min_mask_frames = num_frames - int(min_video_frame_lengths) + 2
         min_mask_patches = self._get_seq_length_for(pixel_values[:, :min_mask_frames, :, :, :])
 
         # mean relative amount of underlap – meaning that the video
         # frames are not fully filling the num_frames of the batch.
-        mean_relative_video_underlap = 1 - mean_video_frame_lengths / num_frames
+        mean_relative_video_underlap = 1 - float(mean_video_frame_lengths) / num_frames
 
         # The amount of masked tokens must be the same for all sequences in the batch.
         # See: https://discuss.huggingface.co/t/videomae-pretrain-batch-masking/22176/7
@@ -92,7 +92,10 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
 
         mask = torch.zeros((batch_size, seq_length)).bool()
         for i in range(batch_size):
-            video_underlap_frames = num_frames - video_frame_lengths[i]
+            video_underlap_frames = num_frames - int(video_frame_lengths[i])
+
+            print(f"video_underlap_frames: {video_underlap_frames}")
+            print(f"video_frame_lengths[i]: {video_frame_lengths[i]}")
 
             # distribute the available masking frames so that the underlapping
             # video frames are always fully masked
@@ -163,7 +166,7 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
 
         # Convert to tensor
         padded_pixel_values = torch.tensor(padded_pixel_values, dtype=torch.float32)
-        video_lengths = torch.tensor(video_lengths, dtype=torch.int)
+        video_lengths = torch.IntTensor(torch.tensor(video_lengths, dtype=torch.int))
 
         mask = self._create_mask_for(padded_pixel_values, video_lengths)
 
