@@ -158,7 +158,7 @@ class CustomVideoMAEForPreTraining(VideoMAEPreTrainedModel):
             # set the loss to 0 for the padding frames
             with torch.no_grad():
                 for batch in range(batch_size):
-                    patches_per_frame = bool_masked_pos.shape[1] // seq_len
+                    patches_per_frame = bool_masked_pos.shape[1] // pixel_values.shape[1]
                     unmasked_patches = video_lengths[batch] * patches_per_frame
 
                     # just a random value that leads to a loss of 0
