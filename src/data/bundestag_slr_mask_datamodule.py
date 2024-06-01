@@ -80,7 +80,7 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
         # for the shortest video in the batch. This is a safeguard
         # against edge cases with wildly varying video lengths.
         min_mask_frames = int(num_frames - min_video_frame_lengths + 2)
-        min_mask_patches = self._get_seq_length_for(pixel_values[0, :min_mask_frames, :, :, :])
+        min_mask_patches = self._get_seq_length_for(pixel_values[:, :min_mask_frames, :, :, :])
 
         # mean relative amount of underlap – meaning that the video
         # frames are not fully filling the num_frames of the batch.
