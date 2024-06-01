@@ -144,7 +144,7 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
                 for ex in batch
             ]
         )
-        video_lengths = np.ndarray([len(video) for video in pixel_values])
+        video_lengths = np.asarray([len(video) for video in pixel_values])
 
         pixel_values = self.pre_processor(
             pixel_values,
