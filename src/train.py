@@ -41,7 +41,7 @@ log = RankedLogger(__name__, rank_zero_only=True)
 
 
 def save_checkpoint_before_exit(trainer: Trainer, path="interrupted_checkpoint.ckpt"):
-    print(f"Setting up signal handler to save checkpoint ${path} before exit...")
+    print(f"Setting up signal handler to save checkpoint {path} before exit...")
 
     def handler(signum, frame):
         print("Saving checkpoint before exit...")
