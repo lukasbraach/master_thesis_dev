@@ -122,13 +122,13 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
 
         pixel_values = self.pre_processor(
             pixel_values,
-            return_tensors='pt',
+            return_tensors='np',
             do_resize=False,
             do_center_crop=False,
             do_rescale=False
         ).pixel_values
 
-        pixel_values = pixel_values.float()
+        pixel_values = torch.tensor(pixel_values, dtype=torch.float32)
         mask = create_mask_for(pixel_values)
 
         result = {
