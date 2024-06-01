@@ -151,6 +151,14 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
             do_rescale=False
         ).pixel_values
 
+        batch_size, num_frames, channels, height, width = pixel_values.shape
+
+        # Create a padded array of zeros
+        # and the original pixel_values into the padded array
+        padded_pixel_values = np.zeros((batch_size, self.hparams.max_frame_seq_length, channels, height, width))
+        padded_pixel_values[:, :num_frames, :, :, :] = pixel_values
+
+        # Convert to tensor
         pixel_values = torch.tensor(pixel_values, dtype=torch.float32)
         video_lengths = torch.tensor(video_lengths, dtype=torch.int)
 
