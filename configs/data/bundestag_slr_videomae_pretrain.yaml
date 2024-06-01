@@ -1,7 +1,10 @@
 _target_: src.data.bundestag_slr_mask_datamodule.BundestagSLRVideoMAEDataModule
 
 batch_size: ${trainer.devices} # Needs to be divisible by the number of devices (e.g., if in a distributed setup)
+dataset_source: "/data/1braach/bundestag_slr"
 num_workers: 16
 pin_memory: True
-max_frame_seq_length: 16
-dataset_source: "/data/1braach/bundestag_slr"
+
+model_patch_size: ${model.net.config.patch_size}
+model_tubelet_size: ${model.net.config.tubelet_size}
+max_frame_seq_length: ${model.net.config.num_frames}
