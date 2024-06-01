@@ -151,21 +151,24 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
             do_rescale=False
         ).pixel_values
 
-        # Convert to tensor
-        pixel_values = torch.tensor(pixel_values, dtype=torch.float32)
-        video_lengths = torch.tensor(video_lengths, dtype=torch.int)
-
         # Create a padded array of zeros
         # and the original pixel_values into the padded array
-        batch_size, num_frames, channels, height, width = pixel_values.shape
-        padded_pixel_values = torch.zeros((batch_size, self.hparams.max_frame_seq_length, channels, height, width),
-                                          dtype=torch.float32)
-        padded_pixel_values[:, :num_frames, :, :, :] = pixel_values
+        batch_size = len(pixel_values)
+        channels, height, width = pixel_values[0][0].shape
 
-        mask = self._create_mask_for(pixel_values, video_lengths)
+        padded_pixel_values = np.zeros((batch_size, self.hparams.max_frame_seq_length, channels, height, width))
+
+        for i, video in enumerate(pixel_values):
+            padded_pixel_values[i, :len(video)] = video
+
+        # Convert to tensor
+        padded_pixel_values = torch.tensor(padded_pixel_values, dtype=torch.float32)
+        video_lengths = torch.tensor(video_lengths, dtype=torch.int)
+
+        mask = self._create_mask_for(padded_pixel_values, video_lengths)
 
         result = {
-            'pixel_values': pixel_values,
+            'pixel_values': padded_pixel_values,
             'video_lengths': video_lengths,
             'attention_mask': mask,
             'ids': [ex['id'] for ex in batch],
