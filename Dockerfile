@@ -11,14 +11,18 @@ RUN apt-get update && apt-get install ffmpeg libsm6 libxext6 htop nload git git-
     net-tools net-tools ifupdown iproute2 grep gawk sed coreutils rsync openssh-client tar gzip unzip bzip2 cron openssh-client tmux screen -y
 RUN git lfs install
 
-RUN wget \
+RUN curl \
     https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
+    -o Miniconda3-latest-Linux-x86_64.sh \
     && mkdir /root/.conda \
     && bash Miniconda3-latest-Linux-x86_64.sh -b \
     && rm -f Miniconda3-latest-Linux-x86_64.sh
 
+ENV CONDA_DEFAULT_ENV=master_thesis_dev
+
 # Create the conda environment and install dependencies
-RUN conda create -n master_thesis_dev && \
+RUN conda init && \
+    conda create -n master_thesis_dev && \
     conda activate master_thesis_dev && \
     conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
 
@@ -33,7 +37,6 @@ SHELL ["/bin/bash", "-c"]
 
 # Activate the conda environment by default
 RUN echo "conda activate master_thesis_dev" >> ~/.bashrc
-ENV CONDA_DEFAULT_ENV=master_thesis_dev
 ENV PATH "/root/miniconda3/envs/myenv/bin:${PATH}"
 
 # Copy the rest of your application's code into the container
