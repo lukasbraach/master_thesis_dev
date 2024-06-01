@@ -7,7 +7,7 @@ defaults:
   - override /data: bundestag_slr_videomae_pretrain
   - override /model: videomae_pretraining_module
   - override /callbacks: default
-  - override /trainer: deepspeed
+  - override /trainer: gpu
 
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
@@ -20,7 +20,6 @@ trainer:
   min_epochs: 10
   max_epochs: 40
   precision: 16-mixed
-  accumulate_grad_batches: 8
 
   gradient_clip_val: 0.5
   gradient_clip_algorithm: value
@@ -28,7 +27,7 @@ trainer:
   devices: 1
 
 data:
-  batch_size: 16
+  batch_size: 4
 
 logger:
   wandb:
@@ -38,7 +37,7 @@ logger:
 callbacks:
   model_checkpoint:
     dirpath: ${paths.output_dir}/checkpoints
-    filename: "epoch_{epoch:03d}"
+    filename: "epoch_{epoch:03d}_step_{step:07d}_loss_{val_loss:.2f}"
     monitor: "val/loss"
     mode: "min"
     save_top_k: -1

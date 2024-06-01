@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 import torch
 from lightning import LightningModule
@@ -27,26 +27,33 @@ class VideoMAEPretrainingModule(LightningModule):
         self.train_loss = MeanMetric()
         self.val_loss = MeanMetric()
 
-    def forward(self, pixel_values, bool_masked_pos=None):
+    def forward(
+            self,
+            pixel_values,
+            bool_masked_pos: torch.BoolTensor = None,
+            video_lengths: Optional[torch.IntTensor] = None
+    ):
         return self.net(pixel_values, bool_masked_pos=bool_masked_pos)
 
     def training_step(self, batch, batch_idx):
         pixel_values = batch['pixel_values']
         bool_masked_pos = batch['attention_mask']
+        video_lengths = batch['video_lengths']
 
-        outputs = self.forward(pixel_values, bool_masked_pos=bool_masked_pos)
+        outputs = self.forward(pixel_values, bool_masked_pos=bool_masked_pos, video_lengths=video_lengths)
 
-        self.log("train/loss", outputs.loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("train/loss", outputs.loss, batch_size=len(batch), on_step=True, on_epoch=True, prog_bar=True)
 
         return outputs.loss
 
     def validation_step(self, batch, batch_idx):
         pixel_values = batch['pixel_values']
         bool_masked_pos = batch['attention_mask']
+        video_lengths = batch['video_lengths']
 
-        outputs = self.forward(pixel_values, bool_masked_pos=bool_masked_pos)
+        outputs = self.forward(pixel_values, bool_masked_pos=bool_masked_pos, video_lengths=video_lengths)
 
-        self.log("val/loss", outputs.loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val/loss", outputs.loss, batch_size=len(batch), on_step=False, on_epoch=True, prog_bar=True)
 
     def configure_optimizers(self) -> Dict[str, Any]:
         """
