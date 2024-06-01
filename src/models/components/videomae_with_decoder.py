@@ -154,7 +154,7 @@ class CustomVideoMAEForPreTraining(VideoMAEPreTrainedModel):
             batch_size, _, num_channels = videos_patch.shape
             labels = videos_patch[bool_masked_pos].reshape(batch_size, -1, num_channels)
 
-        if video_lengths:
+        if video_lengths is not None:
             # set the loss to 0 for the padding frames
             with torch.no_grad():
                 for batch in range(batch_size):
