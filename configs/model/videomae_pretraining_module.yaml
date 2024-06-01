@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - /net: custom_videomae_pretraining
+  - net: custom_videomae_pretraining
 
 _target_: src.models.videomae_pretraining_module.VideoMAEPretrainingModule
 
