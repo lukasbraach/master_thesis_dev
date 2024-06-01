@@ -73,13 +73,13 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
         batch_size, num_frames, channels, height, width = pixel_values.shape
         seq_length = self._get_seq_length_for(pixel_values)
 
-        mean_video_frame_lengths = torch.mean(video_frame_lengths)
-        min_video_frame_lengths = torch.min(video_frame_lengths)
+        mean_video_frame_lengths = torch.mean(video_frame_lengths.float())
+        min_video_frame_lengths = torch.min(video_frame_lengths.float())
 
         # At least the equivalent of 2 frames must be masked
         # for the shortest video in the batch. This is a safeguard
         # against edge cases with wildly varying video lengths.
-        min_mask_frames = num_frames - min_video_frame_lengths + 2
+        min_mask_frames = int(num_frames - min_video_frame_lengths + 2)
         min_mask_patches = self._get_seq_length_for(pixel_values[0, :min_mask_frames, :, :, :])
 
         # mean relative amount of underlap – meaning that the video
