@@ -1,0 +1,6 @@
+defaults:
+  - _self_
+
+_target_: src.models.components.spatiotemporal_encoder.SpatiotemporalEncoderForPreTraining
+config:
+  _target_: src.models.components.spatiotemporal_encoder.SpatiotemporalEncoderConfig

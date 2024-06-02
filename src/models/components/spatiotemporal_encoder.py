@@ -1,3 +1,5 @@
+from typing import Union, Optional
+
 import torch
 from torch import nn
 from transformers import AutoConfig, AutoModel, Wav2Vec2Config, Dinov2Model
@@ -17,6 +19,7 @@ class SpatiotemporalEncoderConfig(Wav2Vec2Config):
                  image_size: tuple = (224, 224, 3),  # (H, W, C)
                  hidden_act="gelu",
                  freeze_feature_extractor=True,
+                 num_negatives=10,  # frames used for negative contrastive loss sampling
                  **kwargs
                  ) -> None:
         super().__init__(
@@ -27,6 +30,7 @@ class SpatiotemporalEncoderConfig(Wav2Vec2Config):
             num_hidden_layers=num_hidden_layers,
             mask_time_length=mask_time_length,
             hidden_act=hidden_act,
+            num_negatives=num_negatives,
             **kwargs
         )
 
@@ -108,6 +112,35 @@ class SpatiotemporalEncoderForPreTraining(Wav2Vec2ForPreTraining):
 
         # Initialize weights and apply final processing
         self.post_init()
+
+    def _get_feat_extract_output_lengths(
+            self, input_lengths: Union[torch.LongTensor, int], add_adapter: Optional[bool] = None
+    ):
+        """
+        Just a dummy, since DINOv2 returns one feature vector per frame.
+        """
+
+        return input_lengths
+
+    def _get_feature_vector_attention_mask(
+            self, feature_vector_length: int, attention_mask: torch.LongTensor, add_adapter=None
+    ):
+        # Effectively attention_mask.sum(-1), but not inplace to be able to run
+        # on inference mode.
+        non_padded_lengths = attention_mask.cumsum(dim=-1)[:, -1]
+
+        output_lengths = self._get_feat_extract_output_lengths(non_padded_lengths, add_adapter=add_adapter)
+        output_lengths = output_lengths.to(torch.long)
+
+        batch_size = attention_mask.shape[0]
+
+        attention_mask = torch.zeros(
+            (batch_size, feature_vector_length), dtype=attention_mask.dtype, device=attention_mask.device
+        )
+        # these two operations makes sure that all values before the output lengths idxs are attended to
+        attention_mask[(torch.arange(attention_mask.shape[0], device=attention_mask.device), output_lengths - 1)] = 1
+        attention_mask = attention_mask.flip([-1]).cumsum(-1).flip([-1]).bool()
+        return attention_mask
 
 
 if __name__ == "__main__":
