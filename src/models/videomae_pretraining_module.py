@@ -1,3 +1,4 @@
+import math
 from typing import Dict, Any, Optional
 
 import torch
@@ -30,17 +31,25 @@ class VideoMAEPretrainingModule(LightningModule):
     def forward(
             self,
             pixel_values,
-            bool_masked_pos: torch.BoolTensor = None,
+            video_lengths: Optional[torch.IntTensor] = None,
+            **kwargs
+    ):
+        return self.net(pixel_values, video_lengths=video_lengths, **kwargs)
+
+    def mask_and_forward(
+            self,
+            pixel_values,
             video_lengths: Optional[torch.IntTensor] = None
     ):
+        bool_masked_pos = self._create_mask_for(pixel_values, video_lengths)
+
         return self.net(pixel_values, bool_masked_pos=bool_masked_pos, video_lengths=video_lengths)
 
     def training_step(self, batch, batch_idx):
         pixel_values = batch['pixel_values']
-        bool_masked_pos = batch['attention_mask']
         video_lengths = batch['video_lengths']
 
-        outputs = self.forward(pixel_values, bool_masked_pos=bool_masked_pos, video_lengths=video_lengths)
+        outputs = self.mask_and_forward(pixel_values, video_lengths=video_lengths)
 
         self.log("train/loss", outputs.loss, batch_size=len(pixel_values), on_step=True, on_epoch=True, prog_bar=True)
 
@@ -48,10 +57,9 @@ class VideoMAEPretrainingModule(LightningModule):
 
     def validation_step(self, batch, batch_idx):
         pixel_values = batch['pixel_values']
-        bool_masked_pos = batch['attention_mask']
         video_lengths = batch['video_lengths']
 
-        outputs = self.forward(pixel_values, bool_masked_pos=bool_masked_pos, video_lengths=video_lengths)
+        outputs = self.mask_and_forward(pixel_values, video_lengths=video_lengths)
 
         self.log("val/loss", outputs.loss, batch_size=len(pixel_values), on_step=False, on_epoch=True, prog_bar=True)
 
@@ -78,6 +86,58 @@ class VideoMAEPretrainingModule(LightningModule):
                 },
             }
         return {"optimizer": optimizer}
+
+    def _get_seq_length_for(self, pixel_values: torch.Tensor) -> int:
+        batch_size, num_frames, channels, height, width = pixel_values.shape
+
+        num_patches_per_frame = (height // self.net.config.patch_size) ** 2
+        seq_length = (num_frames // self.net.config.tubelet_size) * num_patches_per_frame
+
+        return seq_length
+
+    def _create_mask_for(self, pixel_values: torch.Tensor, video_frame_lengths: torch.IntTensor) -> torch.Tensor:
+        '''
+        Create mask for the pixel_values
+        Args:
+            pixel_values: (batch_size, seq_length, 3, 224, 224)
+
+        Returns: mask tensor of shape (batch_size, seq_length)
+        '''
+
+        # patch logic can be found in example:
+        # https://huggingface.co/docs/transformers/main/en/model_doc/videomae#transformers.VideoMAEForPreTraining.forward.example
+
+        batch_size, num_frames, channels, height, width = pixel_values.shape
+        seq_length = self._get_seq_length_for(pixel_values)
+
+        mean_video_frame_lengths = torch.mean(video_frame_lengths.float())
+        min_video_frame_lengths = torch.min(video_frame_lengths)
+
+        # At least the equivalent of 2 frames must be masked
+        # for the shortest video in the batch. This is a safeguard
+        # against edge cases with wildly varying video lengths.
+        min_mask_frames = num_frames - int(min_video_frame_lengths) + 2
+        min_mask_patches = self._get_seq_length_for(pixel_values[:, :min_mask_frames, :, :, :])
+
+        # mean relative amount of underlap – meaning that the video
+        # frames are not fully filling the num_frames of the batch.
+        mean_relative_video_underlap = 1 - float(mean_video_frame_lengths) / num_frames
+
+        # The amount of masked tokens must be the same for all sequences in the batch.
+        # See: https://discuss.huggingface.co/t/videomae-pretrain-batch-masking/22176/7
+        mask_num = max(math.ceil(seq_length * (0.3 + mean_relative_video_underlap)), min_mask_patches)
+
+        mask = torch.zeros((batch_size, seq_length)).bool()
+        for i in range(batch_size):
+            video_underlap_frames = num_frames - int(video_frame_lengths[i])
+
+            # distribute the available masking frames so that the underlapping
+            # video frames are always fully masked
+            perm = torch.randperm(int(video_frame_lengths[i]))[:mask_num - video_underlap_frames]
+            mask[i][perm] = True
+            mask[i][-video_underlap_frames:] = True
+
+        return mask
 
 
 if __name__ == "__main__":

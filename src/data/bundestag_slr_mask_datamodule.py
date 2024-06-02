@@ -38,8 +38,6 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
             dataset_source='lukasbraach/bundestag_slr',
             batch_size: int = 16,
             num_workers: int = 16,
-            model_patch_size: int = 16,
-            model_tubelet_size: int = 2,
             max_frame_seq_length: int = 80,
             pin_memory=False,
     ) -> None:
@@ -59,58 +57,6 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
         )
 
         self.batch_size_per_device = batch_size
-
-    def _get_seq_length_for(self, pixel_values: torch.Tensor) -> int:
-        batch_size, num_frames, channels, height, width = pixel_values.shape
-
-        num_patches_per_frame = (height // self.hparams.model_patch_size) ** 2
-        seq_length = (num_frames // self.hparams.model_tubelet_size) * num_patches_per_frame
-
-        return seq_length
-
-    def _create_mask_for(self, pixel_values: torch.Tensor, video_frame_lengths: torch.IntTensor) -> torch.Tensor:
-        '''
-        Create mask for the pixel_values
-        Args:
-            pixel_values: (batch_size, seq_length, 3, 224, 224)
-
-        Returns: mask tensor of shape (batch_size, seq_length)
-        '''
-
-        # patch logic can be found in example:
-        # https://huggingface.co/docs/transformers/main/en/model_doc/videomae#transformers.VideoMAEForPreTraining.forward.example
-
-        batch_size, num_frames, channels, height, width = pixel_values.shape
-        seq_length = self._get_seq_length_for(pixel_values)
-
-        mean_video_frame_lengths = torch.mean(video_frame_lengths.float())
-        min_video_frame_lengths = torch.min(video_frame_lengths)
-
-        # At least the equivalent of 2 frames must be masked
-        # for the shortest video in the batch. This is a safeguard
-        # against edge cases with wildly varying video lengths.
-        min_mask_frames = num_frames - int(min_video_frame_lengths) + 2
-        min_mask_patches = self._get_seq_length_for(pixel_values[:, :min_mask_frames, :, :, :])
-
-        # mean relative amount of underlap – meaning that the video
-        # frames are not fully filling the num_frames of the batch.
-        mean_relative_video_underlap = 1 - float(mean_video_frame_lengths) / num_frames
-
-        # The amount of masked tokens must be the same for all sequences in the batch.
-        # See: https://discuss.huggingface.co/t/videomae-pretrain-batch-masking/22176/7
-        mask_num = max(math.ceil(seq_length * (0.3 + mean_relative_video_underlap)), min_mask_patches)
-
-        mask = torch.zeros((batch_size, seq_length)).bool()
-        for i in range(batch_size):
-            video_underlap_frames = num_frames - int(video_frame_lengths[i])
-
-            # distribute the available masking frames so that the underlapping
-            # video frames are always fully masked
-            perm = torch.randperm(int(video_frame_lengths[i]))[:mask_num - video_underlap_frames]
-            mask[i][perm] = True
-            mask[i][-video_underlap_frames:] = True
-
-        return mask
 
     def prepare_data(self) -> None:
         """Download data if needed. Lightning ensures that `self.prepare_data()` is called only
@@ -168,7 +114,8 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
         # Create a padded array of zeros
         # and the original pixel_values into the padded array
         channels, height, width = pixel_values[0][0].shape
-        padded_pixel_values = np.zeros((videomae_batch_size, self.hparams.max_frame_seq_length, channels, height, width))
+        padded_pixel_values = np.zeros(
+            (videomae_batch_size, self.hparams.max_frame_seq_length, channels, height, width))
 
         for i, video in enumerate(pixel_values):
             if i >= videomae_batch_size:
@@ -179,12 +126,10 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
 
         # Convert to tensor
         padded_pixel_values = torch.tensor(padded_pixel_values, dtype=torch.float32)
-        mask = self._create_mask_for(padded_pixel_values, video_lengths)
 
         result = {
             'pixel_values': padded_pixel_values,
             'video_lengths': video_lengths,
-            'attention_mask': mask,
             'ids': [ex['id'] for ex in batch],
         }
 
