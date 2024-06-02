@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from transformers import AutoConfig, AutoModel, Wav2Vec2Config, Dinov2Model
-from transformers.models.wav2vec2.modeling_wav2vec2 import Wav2Vec2Model
+from transformers.models.wav2vec2.modeling_wav2vec2 import Wav2Vec2Model, Wav2Vec2ForPreTraining
 
 
 class SpatiotemporalEncoderConfig(Wav2Vec2Config):
@@ -89,6 +89,22 @@ class SpatiotemporalEncoder(Wav2Vec2Model):
         # we have to overwrite these parts for our purposes
         self.feature_extractor = SpatialFeatureEncoder(config)
         self.feature_projection = SpatiotemporalFeatureProjection(config)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+
+class SpatiotemporalEncoderForPreTraining(Wav2Vec2ForPreTraining):
+    config_class = SpatiotemporalEncoderConfig
+    base_model_prefix = "spatiotemporal-encoder"
+    main_input_name = "input_values"
+    supports_gradient_checkpointing = True
+
+    def __init__(self, config: SpatiotemporalEncoderConfig):
+        super().__init__(config)
+
+        # we have to overwrite these parts for our purposes
+        self.wav2vec2 = SpatiotemporalEncoder(config)
 
         # Initialize weights and apply final processing
         self.post_init()
