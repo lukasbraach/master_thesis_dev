@@ -39,9 +39,9 @@ class BundestagSLR(datasets.GeneratorBasedBuilder):
         video_ids_all = df['VideoID'].unique().tolist()
 
         video_ids = {
-            datasets.Split.TRAIN: video_ids_all[:int(len(video_ids_all) * 0.8)],
-            datasets.Split.VALIDATION: video_ids_all[int(len(video_ids_all) * 0.8):int(len(video_ids_all) * 0.9)],
-            datasets.Split.TEST: video_ids_all[int(len(video_ids_all) * 0.9):],
+            datasets.Split.TRAIN: video_ids_all[:int(len(video_ids_all) * 0.9)],
+            datasets.Split.VALIDATION: video_ids_all[int(len(video_ids_all) * 0.9):int(len(video_ids_all) * 0.95)],
+            datasets.Split.TEST: video_ids_all[int(len(video_ids_all) * 0.95):],
         }
 
         for split in [
