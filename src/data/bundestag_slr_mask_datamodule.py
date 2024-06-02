@@ -97,7 +97,6 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
                 for ex in batch
             ]
         )
-        video_lengths = torch.IntTensor(torch.tensor([len(video) for video in pixel_values], dtype=torch.int))
 
         pixel_values = self.pre_processor(
             pixel_values,
@@ -126,10 +125,14 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
 
         # Convert to tensor
         padded_pixel_values = torch.tensor(padded_pixel_values, dtype=torch.float32)
+        video_lengths = torch.IntTensor(torch.tensor([len(video) for video in pixel_values], dtype=torch.int))
+        attention_mask = torch.zeros((videomae_batch_size, self.hparams.max_frame_seq_length), dtype=torch.bool)
+        attention_mask[:, :video_lengths] = 1
 
         result = {
             'pixel_values': padded_pixel_values,
             'video_lengths': video_lengths,
+            'attention_mask': attention_mask,
             'ids': [ex['id'] for ex in batch],
         }
 
