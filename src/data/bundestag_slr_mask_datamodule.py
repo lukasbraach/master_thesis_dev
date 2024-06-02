@@ -10,6 +10,16 @@ from torch.utils.data import DataLoader
 from transformers import VideoMAEImageProcessor
 
 
+def next_lower_power_of_2(n):
+    if n < 1:
+        raise ValueError("Input must be a positive integer")
+    # Check if n is already a power of 2
+    if (n & (n - 1)) == 0:
+        return n
+    # Find the next lower power of 2
+    return 1 << (n.bit_length() - 1)
+
+
 def prepare_data_for_preprocess(pixel_values: torch.Tensor | list[torch.Tensor]):
     batches = [
         [
@@ -151,19 +161,24 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
             do_rescale=False
         ).pixel_values
 
+        # Ensure that the batch size is always in 2^n
+        # as this is some weird batching restriction of VideoMAE
+        videomae_batch_size = next_lower_power_of_2(len(pixel_values))
+
         # Create a padded array of zeros
         # and the original pixel_values into the padded array
-        batch_size = len(pixel_values)
         channels, height, width = pixel_values[0][0].shape
-
-        padded_pixel_values = np.zeros((batch_size, self.hparams.max_frame_seq_length, channels, height, width))
+        padded_pixel_values = np.zeros((videomae_batch_size, self.hparams.max_frame_seq_length, channels, height, width))
 
         for i, video in enumerate(pixel_values):
+            if i >= videomae_batch_size:
+                # don't copy more than we have allocated
+                break
+
             padded_pixel_values[i, :len(video)] = video
 
         # Convert to tensor
         padded_pixel_values = torch.tensor(padded_pixel_values, dtype=torch.float32)
-
         mask = self._create_mask_for(padded_pixel_values, video_lengths)
 
         result = {
