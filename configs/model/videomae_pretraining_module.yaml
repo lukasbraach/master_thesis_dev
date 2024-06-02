@@ -8,7 +8,7 @@ _target_: src.models.videomae_pretraining_module.VideoMAEPretrainingModule
 optimizer:
   _target_: torch.optim.Adam
   _partial_: true
-  lr: 1.5e-4
+  lr: 1.5e-5
 
 scheduler:
   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
