@@ -94,8 +94,8 @@ class SpatiotemporalPretrainingModule(LightningModule):
         """
         optimizer = self.optimizer(params=self.trainer.model.parameters())
 
-        warmup_scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: max(1, (epoch + 1) / 10), last_epoch=10)
-        decay_scheduler = ExponentialLR(optimizer, gamma=0.975, last_epoch=90)
+        warmup_scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: min(1, (epoch + 1) / 10))
+        decay_scheduler = ExponentialLR(optimizer, gamma=0.975)
 
         scheduler = ChainedScheduler([warmup_scheduler, decay_scheduler])
 
