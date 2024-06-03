@@ -66,7 +66,7 @@ class SpatiotemporalPretrainingModule(LightningModule):
         return loss
 
     def training_step(self, batch, batch_idx):
-        pixel_values = batch['input_values']
+        pixel_values = batch['pixel_values']
         attention_mask = batch['attention_mask']
 
         loss = self.mask_and_forward(pixel_values, attention_mask=attention_mask)
@@ -75,7 +75,7 @@ class SpatiotemporalPretrainingModule(LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        pixel_values = batch['input_values']
+        pixel_values = batch['pixel_values']
         attention_mask = batch['attention_mask']
 
         loss = self.mask_and_forward(pixel_values, attention_mask=attention_mask)
