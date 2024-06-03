@@ -36,6 +36,10 @@ class SpatiotemporalEncoderConfig(Wav2Vec2Config):
             # See self.weight_proj in Wav2Vec2GumbelVectorQuantizer.
             conv_dim=(hidden_size,),
 
+            # irrelevant for our purposes, we overwrite the Feature Encoder.
+            conv_stride=(-1,),
+            conv_kernel=(-1,),
+
             **kwargs
         )
 
