@@ -31,6 +31,11 @@ class SpatiotemporalEncoderConfig(Wav2Vec2Config):
             mask_time_length=mask_time_length,
             hidden_act=hidden_act,
             num_negatives=num_negatives,
+
+            # setting conv_dim to hidden_size for pre-training.
+            # See self.weight_proj in Wav2Vec2GumbelVectorQuantizer.
+            conv_dim=(hidden_size,),
+
             **kwargs
         )
 
@@ -121,26 +126,6 @@ class SpatiotemporalEncoderForPreTraining(Wav2Vec2ForPreTraining):
         """
 
         return input_lengths
-
-    def _get_feature_vector_attention_mask(
-            self, feature_vector_length: int, attention_mask: torch.LongTensor, add_adapter=None
-    ):
-        # Effectively attention_mask.sum(-1), but not inplace to be able to run
-        # on inference mode.
-        non_padded_lengths = attention_mask.cumsum(dim=-1)[:, -1]
-
-        output_lengths = self._get_feat_extract_output_lengths(non_padded_lengths, add_adapter=add_adapter)
-        output_lengths = output_lengths.to(torch.long)
-
-        batch_size = attention_mask.shape[0]
-
-        attention_mask = torch.zeros(
-            (batch_size, feature_vector_length), dtype=attention_mask.dtype, device=attention_mask.device
-        )
-        # these two operations makes sure that all values before the output lengths idxs are attended to
-        attention_mask[(torch.arange(attention_mask.shape[0], device=attention_mask.device), output_lengths - 1)] = 1
-        attention_mask = attention_mask.flip([-1]).cumsum(-1).flip([-1]).bool()
-        return attention_mask
 
 
 if __name__ == "__main__":
