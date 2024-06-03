@@ -109,6 +109,7 @@ class SpatiotemporalEncoder(Wav2Vec2Model):
         self.feature_projection = SpatiotemporalFeatureProjection(config)
 
         # Initialize weights and apply final processing
+        # TODO this might overwrite DINOv2 weights
         self.post_init()
 
 
@@ -125,6 +126,7 @@ class SpatiotemporalEncoderForPreTraining(Wav2Vec2ForPreTraining):
         self.wav2vec2 = SpatiotemporalEncoder(config)
 
         # Initialize weights and apply final processing
+        # TODO this might overwrite DINOv2 weights
         self.post_init()
 
     def _get_feat_extract_output_lengths(
