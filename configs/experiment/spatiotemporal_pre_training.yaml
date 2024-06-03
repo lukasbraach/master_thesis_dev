@@ -5,9 +5,9 @@
 
 defaults:
   - override /data: bundestag_slr_pretrain
-  - override /model: spatiotemporal_module
+  - override /model: spatiotemporal_pretraining_module
   - override /callbacks: default
-  - override /trainer: deepspeed
+  - override /trainer: gpu
 
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
@@ -20,7 +20,6 @@ trainer:
   min_epochs: 10
   max_epochs: 40
   precision: 16-mixed
-  accumulate_grad_batches: 8
 
   gradient_clip_val: 0.5
   gradient_clip_algorithm: value
@@ -28,7 +27,7 @@ trainer:
   devices: 1
 
 data:
-  batch_size: 16
+  batch_size: 8
 
 logger:
   wandb:
@@ -38,12 +37,13 @@ logger:
 callbacks:
   model_checkpoint:
     dirpath: ${paths.output_dir}/checkpoints
-    filename: "epoch_{epoch:03d}"
-    monitor: "val/loss"
+    filename: "videomae_{epoch:03d}_{step:07d}_{train_loss:.2f}_{val_loss:.2f}"
     mode: "min"
     save_top_k: -1
     save_last: True
-    every_n_epochs: 1
     auto_insert_metric_name: True
+    train_time_interval:
+      _target_: datetime.timedelta
+      minutes: 30
 
   early_stopping: null

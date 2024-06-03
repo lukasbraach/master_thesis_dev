@@ -42,7 +42,7 @@ class SpatiotemporalPretrainingModule(LightningModule):
         sequence_length = self.net._get_feat_extract_output_lengths(raw_sequence_length).item()
 
         mask_time_indices = _compute_mask_indices(
-            shape=(batch_size, sequence_length), mask_prob=0.2, mask_length=2
+            shape=(batch_size, sequence_length), mask_prob=0.3, mask_length=2
         )
 
         sampled_negative_indices = _sample_negative_indices(
