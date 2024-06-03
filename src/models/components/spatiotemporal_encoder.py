@@ -61,6 +61,10 @@ class SpatialFeatureEncoder(nn.Module):
 
         self.frozen = config.freeze_feature_extractor
 
+    def _init_weights(self, module):
+        # Need to check if DINOv2 weights are getting overwritten.
+        pass
+
     def forward(self, pixel_values):
         with torch.no_grad() if self.frozen else torch.enable_grad():
             batch_size = pixel_values.shape[0]
