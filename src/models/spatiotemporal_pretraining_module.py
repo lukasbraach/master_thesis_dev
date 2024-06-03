@@ -109,14 +109,15 @@ class SpatiotemporalPretrainingModule(LightningModule):
 
             scheduler = ChainedScheduler([warmup_scheduler, decay_scheduler, scheduler])
 
-            return optimizer, [
-                {
+            return {
+                "optimizer": optimizer,
+                "lr_scheduler": {
                     "scheduler": scheduler,
                     "monitor": "train/loss",
                     "interval": "step",
                     "frequency": 2500,
                 },
-            ]
+            }
 
         return {"optimizer": optimizer}
 
