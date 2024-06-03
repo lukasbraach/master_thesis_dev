@@ -37,8 +37,11 @@ class SpatiotemporalPretrainingModule(LightningModule):
         return model_response.hidden_states
 
     def mask_and_forward(self, pixel_values: torch.Tensor, attention_mask=None):
-        batch_size, raw_sequence_length = pixel_values.shape
+        # expecting pixel_values to be of shape (batch_size, sequence_length, num_channels, height, width)
+        batch_size, raw_sequence_length, _, _, _ = pixel_values.shape
 
+        # we basically know that the sequence length is going to be the same as the number of frames,
+        # but for good measure we'll "calculate" it anyway, using the model's method
         sequence_length = self.net._get_feat_extract_output_lengths(raw_sequence_length).item()
 
         mask_time_indices = _compute_mask_indices(
