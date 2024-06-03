@@ -42,7 +42,7 @@ class SpatiotemporalPretrainingModule(LightningModule):
 
         # we basically know that the sequence length is going to be the same as the number of frames,
         # but for good measure we'll "calculate" it anyway, using the model's method
-        sequence_length = self.net._get_feat_extract_output_lengths(raw_sequence_length).item()
+        sequence_length = self.net._get_feat_extract_output_lengths(raw_sequence_length)
 
         mask_time_indices = _compute_mask_indices(
             shape=(batch_size, sequence_length), mask_prob=0.3, mask_length=2
