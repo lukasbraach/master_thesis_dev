@@ -1,8 +1,9 @@
 import math
-from typing import Dict, Any, Optional
+from typing import Optional
 
 import torch
 from lightning import LightningModule
+from torch.optim.lr_scheduler import LambdaLR, ExponentialLR, ChainedScheduler
 from torchmetrics import MeanMetric
 
 from src.models.components.videomae_with_decoder import CustomVideoMAEForPreTraining
@@ -16,15 +17,13 @@ class VideoMAEPretrainingModule(LightningModule):
     def __init__(
             self,
             net: CustomVideoMAEForPreTraining,
-            optimizer: torch.optim.Optimizer,
-            scheduler: torch.optim.lr_scheduler
+            optimizer: torch.optim.Optimizer
     ):
         super().__init__()
 
         self.net = net
 
         self.optimizer = optimizer
-        self.scheduler = scheduler
         self.train_loss = MeanMetric()
         self.val_loss = MeanMetric()
 
@@ -63,7 +62,7 @@ class VideoMAEPretrainingModule(LightningModule):
 
         self.log("val/loss", outputs.loss, batch_size=len(pixel_values), on_step=False, on_epoch=True, prog_bar=True)
 
-    def configure_optimizers(self) -> Dict[str, Any]:
+    def configure_optimizers(self):
         """
         Choose what optimizers and learning-rate schedulers to use in your optimization.
         Normally you'd need one. But in the case of GANs or similar you might have multiple.
@@ -74,18 +73,20 @@ class VideoMAEPretrainingModule(LightningModule):
         :return: A dict containing the configured optimizers and learning-rate schedulers to be used for training.
         """
         optimizer = self.optimizer(params=self.trainer.model.parameters())
-        if self.scheduler is not None:
-            scheduler = self.scheduler(optimizer=optimizer)
-            return {
-                "optimizer": optimizer,
-                "lr_scheduler": {
-                    "scheduler": scheduler,
-                    "monitor": "val/loss",
-                    "interval": "epoch",
-                    "frequency": 1,
-                },
-            }
-        return {"optimizer": optimizer}
+
+        warmup_scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: min(1, (epoch + 1) / 10))
+        decay_scheduler = ExponentialLR(optimizer, gamma=0.975)
+
+        scheduler = ChainedScheduler([warmup_scheduler, decay_scheduler])
+
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "interval": "step",
+                "frequency": 2500,
+            },
+        }
 
     def _get_seq_length_for(self, pixel_values: torch.Tensor) -> int:
         batch_size, num_frames, channels, height, width = pixel_values.shape
