@@ -6,7 +6,7 @@ import torch
 from datasets import IterableDataset, Dataset
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader
-from transformers import BitImageProcessor
+from transformers import BitImageProcessor, PreTrainedTokenizer, PreTrainedTokenizerFast
 
 
 def next_lower_power_of_2(n):
@@ -23,6 +23,8 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
     def __init__(
             self,
             dataset_source='lukasbraach/bundestag_slr',
+            dataset_variant=None,
+            tokenizer: Union[PreTrainedTokenizer, PreTrainedTokenizerFast] = None,
             batch_size: int = 16,
             num_workers: int = 16,
             max_frame_seq_length: int = 80,
@@ -49,9 +51,12 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
 
         self.dataset = datasets.load_dataset(
             dataset_source,
+            name=dataset_variant,
             trust_remote_code=True,
             streaming=True,
         )
+
+        self.tokenizer = tokenizer
 
         self.batch_size_per_device = batch_size
 
@@ -85,13 +90,25 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
             self.batch_size_per_device = self.hparams.batch_size // self.trainer.world_size
 
     def _map_dataset(self, batch):
+        labels = None
+
+        if self.tokenizer is not None:
+            transcription = [ex['transcription'] for ex in batch]
+            labels = self.tokenizer(
+                transcription,
+                padding=self.batch_size_per_device > 1,
+                return_tensors='pt',
+                return_length=True,
+                return_attention_mask=False,
+            )
+
         # expecting pixel_values to be of shape (batch_size, num_frames, 3, 224, 224)
         pixel_values = [
             # enforce max_frame_seq_length by truncating the frames
             # and only return every nth element
             np.asarray(
                 video['frames'] if len(video['frames']) <= self.hparams.max_frame_seq_length else video['frames'][
-                                                                                            :self.hparams.max_frame_seq_length],
+                                                                                                  :self.hparams.max_frame_seq_length],
                 dtype=np.float32
             )[::self.hparams.return_every_nth_element]
             for video in batch
@@ -134,6 +151,9 @@ class BundestagSLRVideoMAEDataModule(LightningDataModule):
             'attention_mask': attention_mask,
             'ids': [ex['id'] for ex in batch],
         }
+
+        if labels is not None:
+            result['labels'] = labels.input_ids,
 
         return result
 
