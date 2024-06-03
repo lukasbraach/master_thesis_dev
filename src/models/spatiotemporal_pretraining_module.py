@@ -1,7 +1,10 @@
-from typing import Dict, Any
+from typing import Union, Sequence, Tuple
 
 import torch
 from lightning import LightningModule
+from lightning.pytorch.utilities.types import LRSchedulerConfig, OptimizerLRSchedulerConfig
+from torch.optim import Optimizer
+from torch.optim.lr_scheduler import LRScheduler, ReduceLROnPlateau, ExponentialLR, ChainedScheduler, LambdaLR
 from torchmetrics import MeanMetric
 from transformers.models.wav2vec2.modeling_wav2vec2 import _compute_mask_indices, _sample_negative_indices
 
@@ -74,7 +77,7 @@ class SpatiotemporalPretrainingModule(LightningModule):
 
         loss = self.mask_and_forward(pixel_values, attention_mask=attention_mask)
 
-        self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
+        self.log("train/loss", loss, batch_size=len(pixel_values), on_step=True, on_epoch=True, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -83,9 +86,11 @@ class SpatiotemporalPretrainingModule(LightningModule):
 
         loss = self.mask_and_forward(pixel_values, attention_mask=attention_mask)
 
-        self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val/loss", loss, batch_size=len(pixel_values), on_step=False, on_epoch=True, prog_bar=True)
 
-    def configure_optimizers(self) -> Dict[str, Any]:
+    def configure_optimizers(self) -> Union[Optimizer, Sequence[Optimizer], Tuple[Sequence[Optimizer], Sequence[
+        Union[LRScheduler, ReduceLROnPlateau, LRSchedulerConfig]]], OptimizerLRSchedulerConfig, Sequence[
+        OptimizerLRSchedulerConfig], None]:
         """
         Choose what optimizers and learning-rate schedulers to use in your optimization.
         Normally you'd need one. But in the case of GANs or similar you might have multiple.
@@ -98,15 +103,21 @@ class SpatiotemporalPretrainingModule(LightningModule):
         optimizer = self.optimizer(params=self.trainer.model.parameters())
         if self.scheduler is not None:
             scheduler = self.scheduler(optimizer=optimizer)
-            return {
-                "optimizer": optimizer,
-                "lr_scheduler": {
+
+            warmup_scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: max(1, (epoch + 1) / 10))
+            decay_scheduler = ExponentialLR(optimizer, gamma=0.96)
+
+            scheduler = ChainedScheduler([warmup_scheduler, decay_scheduler, scheduler])
+
+            return optimizer, [
+                {
                     "scheduler": scheduler,
-                    "monitor": "val/loss",
-                    "interval": "epoch",
-                    "frequency": 1,
+                    "monitor": "train/loss",
+                    "interval": "step",
+                    "frequency": 2500,
                 },
-            }
+            ]
+
         return {"optimizer": optimizer}
 
 
