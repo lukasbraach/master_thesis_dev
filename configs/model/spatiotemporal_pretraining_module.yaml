@@ -1,18 +1,17 @@
 defaults:
   - _self_
-  - encoder: ../net/encoder/spatiotemporal_encoder
-  - decoder: ../net/decoder/spatiotemporal_decoder
+  - net: custom_spatiotemporal_pretraining
 
 _target_: src.models.spatiotemporal_pretraining_module.SpatiotemporalPretrainingModule
 
 optimizer:
   _target_: torch.optim.Adam
   _partial_: true
-  lr: 2e-5
+  lr: 1e-5
 
 scheduler:
   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
   _partial_: true
   mode: min
   factor: 0.1
-  patience: 10
+  patience: 0
