@@ -1,21 +1,33 @@
 from typing import Any, Dict, Optional, Union
 
 import datasets
+import numpy as np
+import torch
 from datasets import IterableDataset, Dataset
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader
+from transformers import BitImageProcessor
 
-from src.models.components.feature_extractor_dinov2 import SignLanguageFeatureExtractor
+
+def next_lower_power_of_2(n):
+    if n < 1:
+        raise ValueError("Input must be a positive integer")
+    # Check if n is already a power of 2
+    if (n & (n - 1)) == 0:
+        return n
+    # Find the next lower power of 2
+    return 1 << (n.bit_length() - 1)
 
 
-class BundestagSLRDataModule(LightningDataModule):
+class BundestagSLRVideoMAEDataModule(LightningDataModule):
     def __init__(
             self,
-            pre_processor: SignLanguageFeatureExtractor = SignLanguageFeatureExtractor(),
             dataset_source='lukasbraach/bundestag_slr',
-            batch_size: int = 1,
+            batch_size: int = 16,
             num_workers: int = 16,
-            max_frame_seq_length: int = None,
+            max_frame_seq_length: int = 80,
+            return_every_nth_element: int = 1,
+            batch_size_exponential_of_2: bool = True,
             pin_memory=False,
     ) -> None:
         super().__init__()
@@ -24,8 +36,16 @@ class BundestagSLRDataModule(LightningDataModule):
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
 
-        # initialized in setup function.
-        self.pre_processor = pre_processor
+        self._image_processor = BitImageProcessor(
+            do_convert_rgb=True,
+            do_normalize=True,
+            do_resize=True,
+            do_center_crop=False,
+            size={"width": 224, "height": 224},
+            image_std=[0.229, 0.224, 0.225],
+            image_mean=[0.485, 0.456, 0.406],
+            resample=3,
+        )
 
         self.dataset = datasets.load_dataset(
             dataset_source,
@@ -34,7 +54,6 @@ class BundestagSLRDataModule(LightningDataModule):
         )
 
         self.batch_size_per_device = batch_size
-        self.max_frame_seq_length = max_frame_seq_length
 
     def prepare_data(self) -> None:
         """Download data if needed. Lightning ensures that `self.prepare_data()` is called only
@@ -66,19 +85,53 @@ class BundestagSLRDataModule(LightningDataModule):
             self.batch_size_per_device = self.hparams.batch_size // self.trainer.world_size
 
     def _map_dataset(self, batch):
-        feature = self.pre_processor(
-            [ex['frames'] for ex in batch],
-            sampling_rate=25,
-            padding=self.batch_size_per_device > 1,
-            return_attention_mask=True,
-            return_tensors='pt',
-            max_length=self.max_frame_seq_length,
-            truncation=True,
-        )
+        # expecting pixel_values to be of shape (batch_size, num_frames, 3, 224, 224)
+        pixel_values = [
+            # enforce max_frame_seq_length by truncating the frames
+            # and only return every nth element
+            np.asarray(
+                video['frames'] if len(video['frames']) <= self.hparams.max_frame_seq_length else video['frames'][
+                                                                                            :self.hparams.max_frame_seq_length],
+                dtype=np.float32
+            )[::self.hparams.return_every_nth_element]
+            for video in batch
+        ]
+        video_lengths = torch.IntTensor(torch.tensor([video.shape[0] for video in pixel_values], dtype=torch.int))
+
+        pixel_values = [
+            self._image_processor(images=video, return_tensors='np')['pixel_values']
+            for video in pixel_values
+        ]
+
+        batch_size = len(pixel_values)
+
+        if self.hparams.batch_size_exponential_of_2:
+            # Ensure that the batch size is always in 2^n
+            # as this is some weird batching restriction of VideoMAE
+            batch_size = next_lower_power_of_2(len(pixel_values))
+
+        # Create a padded array of zeros
+        # and the original pixel_values into the padded array
+        channels, height, width = pixel_values[0][0].shape
+        padded_pixel_values = np.zeros(
+            (batch_size, self.hparams.max_frame_seq_length, channels, height, width))
+        attention_mask = torch.zeros((batch_size, self.hparams.max_frame_seq_length), dtype=torch.bool)
+
+        for i, video in enumerate(pixel_values):
+            if i >= batch_size:
+                # don't copy more than we have allocated
+                break
+
+            attention_mask[i, :len(video)] = 1
+            padded_pixel_values[i, :len(video)] = video
+
+        # Convert to tensor
+        padded_pixel_values = torch.tensor(padded_pixel_values, dtype=torch.float32)
 
         result = {
-            'input_values': feature.input_values,
-            'attention_mask': feature.attention_mask if self.batch_size_per_device > 1 else None,
+            'pixel_values': padded_pixel_values,
+            'video_lengths': video_lengths,
+            'attention_mask': attention_mask,
             'ids': [ex['id'] for ex in batch],
         }
 
@@ -148,4 +201,4 @@ class BundestagSLRDataModule(LightningDataModule):
 
 
 if __name__ == "__main__":
-    _ = BundestagSLRDataModule()
+    _ = BundestagSLRVideoMAEDataModule()
