@@ -1,10 +1,6 @@
-from typing import Union, Sequence, Tuple
-
 import torch
 from lightning import LightningModule
-from lightning.pytorch.utilities.types import LRSchedulerConfig, OptimizerLRSchedulerConfig
-from torch.optim import Optimizer
-from torch.optim.lr_scheduler import LRScheduler, ReduceLROnPlateau, ExponentialLR, ChainedScheduler, LambdaLR
+from torch.optim.lr_scheduler import ExponentialLR, ChainedScheduler, LambdaLR
 from torchmetrics import MeanMetric
 from transformers.models.wav2vec2.modeling_wav2vec2 import _compute_mask_indices, _sample_negative_indices
 
@@ -19,15 +15,13 @@ class SpatiotemporalPretrainingModule(LightningModule):
     def __init__(
             self,
             net: SpatiotemporalEncoderForPreTraining,
-            optimizer: torch.optim.Optimizer,
-            scheduler: torch.optim.lr_scheduler
+            optimizer: torch.optim.Optimizer
     ):
         super().__init__()
 
         self.net = net
 
         self.optimizer = optimizer
-        self.scheduler = scheduler
         self.train_loss = MeanMetric()
         self.val_loss = MeanMetric()
 
@@ -100,8 +94,8 @@ class SpatiotemporalPretrainingModule(LightningModule):
         """
         optimizer = self.optimizer(params=self.trainer.model.parameters())
 
-        warmup_scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: max(1, (epoch + 1) / 10))
-        decay_scheduler = ExponentialLR(optimizer, gamma=0.96)
+        warmup_scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: max(1, (epoch + 1) / 10), last_epoch=10)
+        decay_scheduler = ExponentialLR(optimizer, gamma=0.975, last_epoch=90)
 
         scheduler = ChainedScheduler([warmup_scheduler, decay_scheduler])
 
