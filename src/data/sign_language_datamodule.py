@@ -1,26 +1,38 @@
 from typing import Any, Dict, Optional, Union
 
 import datasets
-import transformers
+import numpy as np
+import torch
 from datasets import IterableDataset, Dataset
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader
-from transformers import PreTrainedTokenizerFast, PreTrainedTokenizer, SequenceFeatureExtractor
-
-from src.models.components.feature_extractor_dinov2 import SignLanguageFeatureExtractor
+from transformers import BitImageProcessor, PreTrainedTokenizer, PreTrainedTokenizerFast
 
 
-class RWTHPhoenix2014DataModule(LightningDataModule):
+def next_lower_power_of_2(n):
+    if n < 1:
+        raise ValueError("Input must be a positive integer")
+    # Check if n is already a power of 2
+    if (n & (n - 1)) == 0:
+        return n
+    # Find the next lower power of 2
+    return 1 << (n.bit_length() - 1)
+
+
+class SignLanguageDataModule(LightningDataModule):
     def __init__(
             self,
-            tokenizer: Union[PreTrainedTokenizer, PreTrainedTokenizerFast],
-            pre_processor: SignLanguageFeatureExtractor = SignLanguageFeatureExtractor(),
-            batch_size: int = 1,
-            num_workers: int = 32,
-            max_frame_seq_length: int = None,
-            streaming=True,
+            dataset_source: str,
+            dataset_variant=None,
+            dataset_frame_key='frames',
+            dataset_transcription_key='transcription',
+            tokenizer: Union[PreTrainedTokenizer, PreTrainedTokenizerFast] = None,
+            batch_size: int = 16,
+            num_workers: int = 16,
+            max_frame_seq_length: int = 80,
+            return_every_nth_element: int = 1,
+            force_batch_size_exponential_of_2: bool = True,
             pin_memory=False,
-            variant='multisigner',
     ) -> None:
         super().__init__()
 
@@ -28,27 +40,27 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
 
-        # initialized in setup function.
-        self.pre_processor = pre_processor
-        self.tokenizer = tokenizer
-
-        self.dataset = datasets.load_dataset(
-            'lukasbraach/rwth_phoenix_weather_2014',
-            variant,
-            trust_remote_code=True,
-            streaming=streaming,
-            num_proc=num_workers if not streaming else None,
+        self._image_processor = BitImageProcessor(
+            do_convert_rgb=True,
+            do_normalize=True,
+            do_resize=True,
+            do_center_crop=False,
+            size={"width": 224, "height": 224},
+            image_std=[0.229, 0.224, 0.225],
+            image_mean=[0.485, 0.456, 0.406],
+            resample=3,
         )
 
-        if variant == 'pre-training':
-            self.tokenizer.pad_token = self.tokenizer.eos_token
-            self.collator = transformers.DataCollatorForLanguageModeling(
-                tokenizer=self.tokenizer,
-                mlm=False,
-            )
+        self.dataset = datasets.load_dataset(
+            dataset_source,
+            name=dataset_variant,
+            trust_remote_code=True,
+            streaming=True,
+        )
+
+        self.tokenizer = tokenizer
 
         self.batch_size_per_device = batch_size
-        self.max_frame_seq_length = max_frame_seq_length
 
     def prepare_data(self) -> None:
         """Download data if needed. Lightning ensures that `self.prepare_data()` is called only
@@ -80,36 +92,72 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
             self.batch_size_per_device = self.hparams.batch_size // self.trainer.world_size
 
     def _map_dataset(self, batch):
-        transcription = [ex['transcription'] for ex in batch]
+        labels = None
 
-        labels = self.tokenizer(
-            transcription,
-            padding=self.batch_size_per_device > 1,
-            return_tensors='pt',
-            return_length=True,
-            return_attention_mask=False,
-        )
+        if self.tokenizer is not None:
+            transcription = [ex[self.hparams.dataset_transcription_key] for ex in batch]
+            labels = self.tokenizer(
+                transcription,
+                padding=self.batch_size_per_device > 1,
+                return_tensors='pt',
+                return_length=True,
+                return_attention_mask=False,
+            )
 
-        if self.hparams.variant == 'pre-training':
-            collated = self.collator(labels.input_ids)
+        # expecting pixel_values to be of shape (batch_size, num_frames, 3, 224, 224)
+        pixel_values = [
+            # enforce max_frame_seq_length by truncating the frames
+            # and only return every nth element
+            np.asarray(
+                video[self.hparams.dataset_frames_key]
+                if len(video[self.hparams.dataset_frames_key]) <= self.hparams.max_frame_seq_length
+                else video[self.hparams.dataset_frames_key][:self.hparams.max_frame_seq_length],
+                dtype=np.float32)
+            [::self.hparams.return_every_nth_element]
 
-            return collated
+            for video in batch
+        ]
+        video_lengths = torch.IntTensor(torch.tensor([video.shape[0] for video in pixel_values], dtype=torch.int))
 
-        feature = self.pre_processor(
-            [ex['frames'] for ex in batch],
-            sampling_rate=25,
-            padding=self.batch_size_per_device > 1,
-            return_attention_mask=True,
-            return_tensors='pt',
-            max_length=self.max_frame_seq_length,
-        )
+        pixel_values = [
+            self._image_processor(images=video, return_tensors='np')['pixel_values']
+            for video in pixel_values
+        ]
+
+        batch_size = len(pixel_values)
+
+        if self.hparams.force_batch_size_exponential_of_2:
+            # Ensure that the batch size is always in 2^n
+            # as this is some weird batching restriction of VideoMAE
+            batch_size = next_lower_power_of_2(len(pixel_values))
+
+        # Create a padded array of zeros
+        # and the original pixel_values into the padded array
+        channels, height, width = pixel_values[0][0].shape
+        padded_pixel_values = np.zeros(
+            (batch_size, self.hparams.max_frame_seq_length, channels, height, width))
+        attention_mask = torch.zeros((batch_size, self.hparams.max_frame_seq_length), dtype=torch.bool)
+
+        for i, video in enumerate(pixel_values):
+            if i >= batch_size:
+                # don't copy more than we have allocated
+                break
+
+            attention_mask[i, :len(video)] = 1
+            padded_pixel_values[i, :len(video)] = video
+
+        # Convert to tensor
+        padded_pixel_values = torch.tensor(padded_pixel_values, dtype=torch.float32)
 
         result = {
-            'input_values': feature.input_values,
-            'attention_mask': feature.attention_mask if self.batch_size_per_device > 1 else None,
-            'labels': labels.input_ids,
+            'pixel_values': padded_pixel_values,
+            'video_lengths': video_lengths,
+            'attention_mask': attention_mask,
             'ids': [ex['id'] for ex in batch],
         }
+
+        if labels is not None:
+            result['labels'] = labels.input_ids,
 
         return result
 
@@ -177,4 +225,4 @@ class RWTHPhoenix2014DataModule(LightningDataModule):
 
 
 if __name__ == "__main__":
-    _ = RWTHPhoenix2014DataModule()
+    _ = SignLanguageDataModule()

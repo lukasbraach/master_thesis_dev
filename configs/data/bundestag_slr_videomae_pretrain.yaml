@@ -1,4 +1,4 @@
-_target_: src.data.bundestag_slr_mask_datamodule.BundestagSLRVideoMAEDataModule
+_target_: src.data.sign_language_datamodule.SignLanguageDataModule
 
 batch_size: ${trainer.devices} # Needs to be divisible by the number of devices (e.g., if in a distributed setup)
 dataset_source: "/data/1braach/bundestag_slr"
