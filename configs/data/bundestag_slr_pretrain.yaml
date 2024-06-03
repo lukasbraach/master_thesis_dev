@@ -7,5 +7,5 @@ pin_memory: True
 
 dataset_frames_key: frames
 dataset_transcription_key: subtitle
-max_frame_seq_length: ${model.net.config.num_frames}
+max_frame_seq_length: 80
 force_batch_size_exponential_of_2: True
