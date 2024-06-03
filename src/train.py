@@ -1,5 +1,3 @@
-import os
-import signal
 from typing import Any, Dict, List, Optional, Tuple
 
 import hydra
@@ -38,18 +36,6 @@ from src.utils import (
 )
 
 log = RankedLogger(__name__, rank_zero_only=True)
-
-
-def save_checkpoint_before_exit(trainer: Trainer, path="interrupted_checkpoint.ckpt"):
-    print(f"Setting up signal handler to save checkpoint {path} before exit...")
-
-    def handler(signum, frame):
-        print("Saving checkpoint before exit...")
-        trainer.save_checkpoint(path)
-        print("Checkpoint saved. Exiting now.")
-        exit(0)
-
-    return handler
 
 
 @task_wrapper
@@ -97,14 +83,6 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
     if cfg.get("train"):
         log.info("Starting training!")
-        # Attach the signal handler
-        signal.signal(
-            signal.SIGINT,
-            save_checkpoint_before_exit(
-                trainer,
-                path=os.path.join(cfg.get("paths").get("output_dir", default_value='.'), "interrupted_checkpoint.ckpt")
-            )
-        )
         trainer.fit(model=model, datamodule=datamodule, ckpt_path=cfg.get("ckpt_path"))
 
     train_metrics = trainer.callback_metrics
