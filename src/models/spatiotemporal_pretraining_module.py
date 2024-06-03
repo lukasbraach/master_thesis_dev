@@ -88,9 +88,7 @@ class SpatiotemporalPretrainingModule(LightningModule):
 
         self.log("val/loss", loss, batch_size=len(pixel_values), on_step=False, on_epoch=True, prog_bar=True)
 
-    def configure_optimizers(self) -> Union[Optimizer, Sequence[Optimizer], Tuple[Sequence[Optimizer], Sequence[
-        Union[LRScheduler, ReduceLROnPlateau, LRSchedulerConfig]]], OptimizerLRSchedulerConfig, Sequence[
-        OptimizerLRSchedulerConfig], None]:
+    def configure_optimizers(self):
         """
         Choose what optimizers and learning-rate schedulers to use in your optimization.
         Normally you'd need one. But in the case of GANs or similar you might have multiple.
@@ -101,25 +99,20 @@ class SpatiotemporalPretrainingModule(LightningModule):
         :return: A dict containing the configured optimizers and learning-rate schedulers to be used for training.
         """
         optimizer = self.optimizer(params=self.trainer.model.parameters())
-        if self.scheduler is not None:
-            scheduler = self.scheduler(optimizer=optimizer)
 
-            warmup_scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: max(1, (epoch + 1) / 10))
-            decay_scheduler = ExponentialLR(optimizer, gamma=0.96)
+        warmup_scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: max(1, (epoch + 1) / 10))
+        decay_scheduler = ExponentialLR(optimizer, gamma=0.96)
 
-            scheduler = ChainedScheduler([warmup_scheduler, decay_scheduler, scheduler])
+        scheduler = ChainedScheduler([warmup_scheduler, decay_scheduler])
 
-            return {
-                "optimizer": optimizer,
-                "lr_scheduler": {
-                    "scheduler": scheduler,
-                    "monitor": "train/loss",
-                    "interval": "step",
-                    "frequency": 2500,
-                },
-            }
-
-        return {"optimizer": optimizer}
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "interval": "step",
+                "frequency": 2500,
+            },
+        }
 
 
 if __name__ == "__main__":
