@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from datasets import Sequence, Array3D, Value
 
-base_url = "."
+base_url = "https://huggingface.co/datasets/lukasbraach/bundestag_slr/resolve/main/"
 
 
 class BundestagSLR(datasets.GeneratorBasedBuilder):

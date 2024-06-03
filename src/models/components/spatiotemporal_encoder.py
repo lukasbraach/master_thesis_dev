@@ -63,6 +63,7 @@ class SpatialFeatureEncoder(nn.Module):
 
     def _init_weights(self, module):
         # Need to check if DINOv2 weights are getting overwritten.
+        print("Initializing weights for DINOv2 SpatiotemporalEncoder")
         pass
 
     def forward(self, pixel_values):
@@ -105,12 +106,14 @@ class SpatiotemporalEncoder(Wav2Vec2Model):
         super().__init__(config)
 
         # we have to overwrite these parts for our purposes
-        self.feature_extractor = SpatialFeatureEncoder(config)
         self.feature_projection = SpatiotemporalFeatureProjection(config)
 
         # Initialize weights and apply final processing
-        # TODO this might overwrite DINOv2 weights
         self.post_init()
+
+        # Overwrite the feature extractor, after the weights are initialized.
+        # This way we can load the weights from the pre-trained model.
+        self.feature_extractor = SpatialFeatureEncoder(config)
 
 
 class SpatiotemporalEncoderForPreTraining(Wav2Vec2ForPreTraining):
@@ -125,9 +128,8 @@ class SpatiotemporalEncoderForPreTraining(Wav2Vec2ForPreTraining):
         # we have to overwrite these parts for our purposes
         self.wav2vec2 = SpatiotemporalEncoder(config)
 
-        # Initialize weights and apply final processing
-        # TODO this might overwrite DINOv2 weights
-        self.post_init()
+        # Weights are already initialized in the Wav2Vec2Model
+        # self.post_init()
 
     def _get_feat_extract_output_lengths(
             self, input_lengths: Union[torch.LongTensor, int], add_adapter: Optional[bool] = None
