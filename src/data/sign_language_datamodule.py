@@ -24,7 +24,7 @@ class SignLanguageDataModule(LightningDataModule):
             self,
             dataset_source: str,
             dataset_variant=None,
-            dataset_frame_key='frames',
+            dataset_frames_key='frames',
             dataset_transcription_key='transcription',
             tokenizer: Union[PreTrainedTokenizer, PreTrainedTokenizerFast] = None,
             batch_size: int = 16,
