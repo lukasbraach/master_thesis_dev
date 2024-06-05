@@ -7,4 +7,4 @@ _target_: src.models.spatiotemporal_pretraining_module.SpatiotemporalPretraining
 optimizer:
   _target_: torch.optim.Adam
   _partial_: true
-  lr: 5e-5
+  lr: 2e-5
