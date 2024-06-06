@@ -4,7 +4,11 @@ defaults:
 
 _target_: src.models.spatiotemporal_pretraining_module.SpatiotemporalPretrainingModule
 
+net:
+  config:
+    freeze_feature_extractor: True
+
 optimizer:
   _target_: torch.optim.Adam
   _partial_: true
-  lr: 2e-5
+  lr: 1e-5
