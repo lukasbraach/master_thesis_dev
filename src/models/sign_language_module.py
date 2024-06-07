@@ -159,10 +159,10 @@ class SignLanguageLitModule(LightningModule):
         loss, preds, targets = self.model_step(batch)
 
         # update and log metrics
-        self.val_loss(loss)
+        self.val/loss(loss)
         self.val_wer(preds, targets)
 
-        self.log("val/loss", self.val_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val/loss", self.val/loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("val/wer", self.val_wer, on_step=False, on_epoch=True, prog_bar=True)
 
         for col in zip(batch['ids'], preds, targets):

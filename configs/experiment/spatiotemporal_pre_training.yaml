@@ -20,6 +20,7 @@ trainer:
   min_epochs: 10
   max_epochs: 40
   precision: 16-mixed
+  accumulate_grad_batches: 4
 
   gradient_clip_val: 0.5
   gradient_clip_algorithm: value
@@ -27,7 +28,7 @@ trainer:
   devices: 1
 
 data:
-  batch_size: 4 # this already takes 56 GB of GPU memory
+  batch_size: 16
 
 logger:
   wandb:
@@ -37,7 +38,7 @@ logger:
 callbacks:
   model_checkpoint:
     dirpath: ${paths.output_dir}/checkpoints
-    filename: "spatiotemporal_{epoch:03d}_{step:07d}_{train/loss:.3f}_{val/loss:.3f}"
+    filename: "spatiotemporal_{epoch:03d}_{step:07d}"
     mode: "min"
     save_top_k: -1
     save_last: True
