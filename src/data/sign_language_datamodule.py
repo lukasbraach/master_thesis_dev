@@ -43,6 +43,8 @@ class SignLanguageDataModule(LightningDataModule):
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
 
+        print("Loading BitImageProcessor")
+
         self._image_processor = BitImageProcessor(
             do_convert_rgb=True,
             do_normalize=True,
@@ -54,12 +56,16 @@ class SignLanguageDataModule(LightningDataModule):
             resample=3,
         )
 
+        print(f"Loading dataset {dataset_source} {dataset_variant}")
+
         self.dataset = datasets.load_dataset(
             dataset_source,
             name=dataset_variant,
             trust_remote_code=True,
             streaming=True,
         )
+
+        print("Dataset loaded")
 
         self.tokenizer = tokenizer
 
