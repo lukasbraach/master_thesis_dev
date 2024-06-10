@@ -166,7 +166,8 @@ class SignLanguageDataModule(LightningDataModule):
         }
 
         if labels is not None:
-            result['labels'] = labels['input_ids'],
+            # addressing input_ids via dot notation instead of key lookup!!
+            result['labels'] = labels.input_ids
 
         return result
 

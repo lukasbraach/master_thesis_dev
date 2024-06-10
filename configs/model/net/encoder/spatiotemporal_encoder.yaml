@@ -3,4 +3,4 @@ _target_: src.models.components.spatiotemporal_encoder.SpatiotemporalEncoder
 config:
   _target_: src.models.components.spatiotemporal_encoder.SpatiotemporalEncoderConfig
 
-  freeze_feature_extractor: false
+  freeze_feature_extractor: True
