@@ -99,7 +99,10 @@ class SignLanguageLitModule(LightningModule):
             - A tensor of target labels.
         """
 
-        output = self.forward(**batch)
+        pixel_values = batch['pixel_values']
+        attention_mask = batch['attention_mask']
+
+        output = self.forward(input_values=pixel_values, attention_mask=attention_mask, labels=batch["labels"])
         preds = torch.argmax(output.logits, dim=2)
 
         truth_decoded = self.net.tokenizer.batch_decode(batch["labels"], skip_special_tokens=True)
