@@ -20,7 +20,6 @@ class SpatiotemporalEncoderConfig(Wav2Vec2Config):
                  hidden_act="gelu",
                  freeze_feature_extractor=True,
                  num_negatives=10,  # frames used for negative contrastive loss sampling
-                 **kwargs
                  ) -> None:
         super().__init__(
             hidden_size=hidden_size,
@@ -40,8 +39,6 @@ class SpatiotemporalEncoderConfig(Wav2Vec2Config):
             # Still, it must be set to valid convolution values to avoid errors.
             conv_stride=(5,),
             conv_kernel=(10,),
-
-            **kwargs
         )
 
         self.image_size = image_size
