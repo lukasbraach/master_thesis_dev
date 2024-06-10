@@ -7,7 +7,7 @@ defaults:
   - override /data: rwth_phoenix_2014
   - override /model: sign_language_module
   - override /callbacks: default
-  - override /trainer: deepspeed
+  - override /trainer: gpu
 
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
@@ -28,7 +28,7 @@ trainer:
   devices: 1
 
 data:
-  batch_size: 1
+  batch_size: 16
 
 logger:
   wandb:
@@ -38,7 +38,7 @@ logger:
 callbacks:
   model_checkpoint:
     dirpath: ${paths.output_dir}/checkpoints
-    filename: "epoch_{epoch:03d}"
+    filename: "epoch_{epoch:03d}_step_{global_step:06d}"
     monitor: "val/loss"
     mode: "min"
     save_top_k: -1

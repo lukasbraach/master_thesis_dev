@@ -4,6 +4,10 @@ defaults:
 
 _target_: src.models.sign_language_module.SignLanguageLitModule
 
+net:
+  config:
+    freeze_feature_extractor: True
+
 optimizer:
   _target_: torch.optim.Adam
   _partial_: true
