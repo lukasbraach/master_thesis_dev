@@ -167,7 +167,8 @@ class SignLanguageDataModule(LightningDataModule):
 
         if labels is not None:
             # addressing input_ids via dot notation instead of key lookup!!
-            result['labels'] = labels.input_ids
+            # using at most batch_size labels.
+            result['labels'] = labels.input_ids[:batch_size]
 
         return result
 
