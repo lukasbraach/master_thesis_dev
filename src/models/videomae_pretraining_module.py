@@ -3,7 +3,7 @@ from typing import Optional
 
 import torch
 from lightning import LightningModule
-from torch.optim.lr_scheduler import LambdaLR, ExponentialLR, ChainedScheduler
+from torch.optim.lr_scheduler import LambdaLR
 from torchmetrics import MeanMetric
 
 from src.models.components.videomae_with_decoder import CustomVideoMAEForPreTraining
@@ -74,10 +74,13 @@ class VideoMAEPretrainingModule(LightningModule):
         """
         optimizer = self.optimizer(params=self.trainer.model.parameters())
 
-        warmup_scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: min(1, (epoch + 1) / 10))
-        decay_scheduler = ExponentialLR(optimizer, gamma=0.975)
+        def lr_lambda(epoch, warmup_epochs=10, decay_rate=0.95):
+            if epoch < warmup_epochs:
+                return (epoch + 1) / warmup_epochs
+            else:
+                return decay_rate ** (epoch - warmup_epochs)
 
-        scheduler = ChainedScheduler([warmup_scheduler, decay_scheduler])
+        scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda)
 
         return {
             "optimizer": optimizer,

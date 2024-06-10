@@ -11,10 +11,10 @@ class SpatiotemporalEncoderConfig(Wav2Vec2Config):
 
     def __init__(self,
                  hidden_size: int = 768,
-                 intermediate_size: int = 3072,
+                 intermediate_size: int = 2048,
                  dropout: float = 0.1,
                  num_attention_heads: int = 8,
-                 num_hidden_layers: int = 12,
+                 num_hidden_layers: int = 6,
                  mask_time_length: int = 1,
                  image_size: tuple = (224, 224, 3),  # (H, W, C)
                  hidden_act="gelu",

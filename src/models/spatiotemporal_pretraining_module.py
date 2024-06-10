@@ -1,6 +1,6 @@
 import torch
 from lightning import LightningModule
-from torch.optim.lr_scheduler import ExponentialLR, ChainedScheduler, LambdaLR
+from torch.optim.lr_scheduler import LambdaLR
 from torchmetrics import MeanMetric
 from transformers.models.wav2vec2.modeling_wav2vec2 import _compute_mask_indices, _sample_negative_indices
 
@@ -94,14 +94,13 @@ class SpatiotemporalPretrainingModule(LightningModule):
         """
         optimizer = self.optimizer(params=self.trainer.model.parameters())
 
-        def lr_lambda(epoch, warmup_epochs=10, decay_rate=0.975):
+        def lr_lambda(epoch, warmup_epochs=10, decay_rate=0.95):
             if epoch < warmup_epochs:
                 return (epoch + 1) / warmup_epochs
             else:
                 return decay_rate ** (epoch - warmup_epochs)
 
         scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda)
-        scheduler = ChainedScheduler([scheduler])
 
         return {
             "optimizer": optimizer,

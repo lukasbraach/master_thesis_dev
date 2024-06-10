@@ -3,6 +3,7 @@ from typing import Any, Dict, Tuple, Optional
 import torch
 from lightning import LightningModule
 from lightning.pytorch.loggers import WandbLogger
+from torch.optim.lr_scheduler import LambdaLR
 from torchmetrics import MeanMetric, MinMetric
 from torchmetrics.text import WordErrorRate
 from transformers.modeling_outputs import Seq2SeqLMOutput
@@ -11,6 +12,7 @@ from src.models.components.sign_language_net import SignLanguageNet
 
 # Faster training on Ampere cards...
 torch.backends.cuda.matmul.allow_tf32 = True
+torch.set_float32_matmul_precision('high')
 
 
 class SignLanguageLitModule(LightningModule):
@@ -18,8 +20,6 @@ class SignLanguageLitModule(LightningModule):
             self,
             net: SignLanguageNet,
             optimizer: torch.optim.Optimizer,
-            scheduler: torch.optim.lr_scheduler,
-            compile: bool,
     ) -> None:
         """Initialize a `SignLanguageLitModule`.
 
@@ -247,7 +247,7 @@ class SignLanguageLitModule(LightningModule):
         if self.hparams.compile and stage == "fit":
             self.net = torch.compile(self.net)
 
-    def configure_optimizers(self) -> Dict[str, Any]:
+    def configure_optimizers(self):
         """
         Choose what optimizers and learning-rate schedulers to use in your optimization.
         Normally you'd need one. But in the case of GANs or similar you might have multiple.
@@ -257,19 +257,24 @@ class SignLanguageLitModule(LightningModule):
 
         :return: A dict containing the configured optimizers and learning-rate schedulers to be used for training.
         """
-        optimizer = self.hparams.optimizer(params=self.trainer.model.parameters())
-        if self.hparams.scheduler is not None:
-            scheduler = self.hparams.scheduler(optimizer=optimizer)
-            return {
-                "optimizer": optimizer,
-                "lr_scheduler": {
-                    "scheduler": scheduler,
-                    "monitor": "val/loss",
-                    "interval": "epoch",
-                    "frequency": 1,
-                },
-            }
-        return {"optimizer": optimizer}
+        optimizer = self.optimizer(params=self.trainer.model.parameters())
+
+        def lr_lambda(epoch, warmup_epochs=10, decay_rate=0.95):
+            if epoch < warmup_epochs:
+                return (epoch + 1) / warmup_epochs
+            else:
+                return decay_rate ** (epoch - warmup_epochs)
+
+        scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda)
+
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "interval": "step",
+                "frequency": 150,
+            },
+        }
 
 
 if __name__ == "__main__":
