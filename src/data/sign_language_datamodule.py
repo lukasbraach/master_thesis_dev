@@ -113,8 +113,6 @@ class SignLanguageDataModule(LightningDataModule):
                 return_attention_mask=False,
             )
 
-            print(labels)
-
         # expecting pixel_values to be of shape (batch_size, num_frames, 3, 224, 224)
         pixel_values = [
             # enforce max_frame_seq_length by truncating the frames
@@ -168,7 +166,7 @@ class SignLanguageDataModule(LightningDataModule):
         }
 
         if labels is not None:
-            result['labels'] = labels.input_ids,
+            result['labels'] = labels['input_ids'],
 
         return result
 

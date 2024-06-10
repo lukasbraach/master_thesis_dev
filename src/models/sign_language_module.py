@@ -97,6 +97,8 @@ class SignLanguageLitModule(LightningModule):
         attention_mask = batch['attention_mask']
         labels = batch['labels']
 
+        print(labels)
+
         output = self.forward(input_values=pixel_values, attention_mask=attention_mask, labels=labels)
         preds = torch.argmax(output.logits, dim=2)
 
