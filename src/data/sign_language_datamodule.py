@@ -107,11 +107,13 @@ class SignLanguageDataModule(LightningDataModule):
             transcription = [ex[self.hparams.dataset_transcription_key] for ex in batch]
             labels = self.tokenizer(
                 transcription,
-                padding=self.batch_size_per_device > 1,
+                padding=len(batch) > 1,
                 return_tensors='pt',
                 return_length=True,
                 return_attention_mask=False,
             )
+
+            print(labels)
 
         # expecting pixel_values to be of shape (batch_size, num_frames, 3, 224, 224)
         pixel_values = [

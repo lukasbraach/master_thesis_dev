@@ -1,4 +1,4 @@
-from typing import Any, Dict, Tuple, Optional
+from typing import Tuple, Optional
 
 import torch
 from lightning import LightningModule
@@ -81,9 +81,7 @@ class SignLanguageLitModule(LightningModule):
         self.val_wer.reset()
         self.val_wer_best.reset()
 
-    def model_step(
-            self, batch: dict
-    ) -> Tuple[torch.Tensor, list, list]:
+    def model_step(self, batch: dict) -> Tuple[torch.Tensor, list, list]:
         """
         Perform a single model step on a batch of data.
 
@@ -97,11 +95,12 @@ class SignLanguageLitModule(LightningModule):
 
         pixel_values = batch['pixel_values']
         attention_mask = batch['attention_mask']
+        labels = batch['labels']
 
-        output = self.forward(input_values=pixel_values, attention_mask=attention_mask, labels=batch["labels"])
+        output = self.forward(input_values=pixel_values, attention_mask=attention_mask, labels=labels)
         preds = torch.argmax(output.logits, dim=2)
 
-        truth_decoded = self.net.tokenizer.batch_decode(batch["labels"], skip_special_tokens=True)
+        truth_decoded = self.net.tokenizer.batch_decode(labels, skip_special_tokens=True)
         preds_decoded = self.net.tokenizer.batch_decode(preds, skip_special_tokens=True)
 
         return output.loss, preds_decoded, truth_decoded
@@ -157,10 +156,10 @@ class SignLanguageLitModule(LightningModule):
         loss, preds, targets = self.model_step(batch)
 
         # update and log metrics
-        self.val/loss(loss)
+        self.val_loss(loss)
         self.val_wer(preds, targets)
 
-        self.log("val/loss", self.val/loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val/loss", self.val / loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("val/wer", self.val_wer, on_step=False, on_epoch=True, prog_bar=True)
 
         for col in zip(batch['ids'], preds, targets):
