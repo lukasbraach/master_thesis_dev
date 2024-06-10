@@ -20,6 +20,7 @@ class SpatiotemporalEncoderConfig(Wav2Vec2Config):
                  hidden_act="gelu",
                  freeze_feature_extractor=True,
                  num_negatives=10,  # frames used for negative contrastive loss sampling
+                 **catchall,
                  ) -> None:
         super().__init__(
             hidden_size=hidden_size,
