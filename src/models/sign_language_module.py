@@ -34,6 +34,7 @@ class SignLanguageLitModule(LightningModule):
         self.save_hyperparameters(ignore=['net'], logger=False)
 
         self.net = net
+        self.optimizer = optimizer
 
         # metric objects for calculating and averaging accuracy across batches
         self.train_wer = WordErrorRate()
