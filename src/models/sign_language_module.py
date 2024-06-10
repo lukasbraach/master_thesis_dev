@@ -98,8 +98,6 @@ class SignLanguageLitModule(LightningModule):
             - A tensor of target labels.
         """
 
-        torch.cuda.empty_cache()
-
         output = self.forward(**batch)
         preds = torch.argmax(output.logits, dim=2)
 
@@ -244,8 +242,7 @@ class SignLanguageLitModule(LightningModule):
 
         :param stage: Either `"fit"`, `"validate"`, `"test"`, or `"predict"`.
         """
-        if self.hparams.compile and stage == "fit":
-            self.net = torch.compile(self.net)
+        pass
 
     def configure_optimizers(self):
         """
