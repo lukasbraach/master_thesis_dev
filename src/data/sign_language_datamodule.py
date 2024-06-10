@@ -1,3 +1,4 @@
+import os
 from typing import Any, Dict, Optional, Union
 
 import datasets
@@ -8,6 +9,8 @@ from lightning import LightningDataModule
 from torch.utils.data import DataLoader
 from transformers import BitImageProcessor, PreTrainedTokenizer, PreTrainedTokenizerFast
 
+# disable parallelism in tokenizers
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 def next_lower_power_of_2(n):
     if n < 1:
