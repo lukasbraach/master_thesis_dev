@@ -16,8 +16,9 @@ torch.set_float32_matmul_precision('high')
 class VideoMAEPretrainingModule(LightningModule):
     def __init__(
             self,
-            net: CustomVideoMAEForPreTraining,
-            optimizer: torch.optim.Optimizer
+            # default parameters for restoring.
+            net: CustomVideoMAEForPreTraining = None,
+            optimizer: torch.optim.Optimizer = None,
     ):
         super().__init__()
 
