@@ -34,6 +34,7 @@ fairscale
 mediapipe
 opencv-python
 av
+pysrt
 
 jupyterlab
 

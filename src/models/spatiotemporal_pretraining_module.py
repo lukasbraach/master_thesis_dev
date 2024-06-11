@@ -111,6 +111,9 @@ class SpatiotemporalPretrainingModule(LightningModule):
             },
         }
 
+    def get_pretrained_model(self):
+        return self.net.wav2vec2
+
 
 if __name__ == "__main__":
     _ = SpatiotemporalPretrainingModule(None, None, None, None)

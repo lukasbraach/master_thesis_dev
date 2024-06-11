@@ -91,6 +91,9 @@ class VideoMAEPretrainingModule(LightningModule):
             },
         }
 
+    def get_pretrained_model(self):
+        return self.net.videomae
+
     def _get_seq_length_for(self, pixel_values: torch.Tensor) -> int:
         batch_size, num_frames, channels, height, width = pixel_values.shape
 
