@@ -1,12 +1,12 @@
 from typing import Optional, Tuple, Union
 
 import torch
-from transformers import VideoMAEModel
+from transformers import VideoMAEModel, AutoModel, VideoMAEConfig
 from transformers.modeling_outputs import BaseModelOutput
 
 
 class CustomVideoMAEModel(VideoMAEModel):
-    def __init__(self, config):
+    def __init__(self, config: VideoMAEConfig):
         super().__init__(config)
 
     def forward(
@@ -35,3 +35,6 @@ class CustomVideoMAEModel(VideoMAEModel):
         Just a hack to make SpeechEncoderDecoderModel work with VideoMAEModel
         """
         return attention_mask
+
+
+AutoModel.register(VideoMAEConfig, CustomVideoMAEModel)
