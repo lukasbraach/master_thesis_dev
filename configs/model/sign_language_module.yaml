@@ -12,5 +12,5 @@ net:
 optimizer:
   _target_: torch.optim.Adam
   _partial_: true
-  lr: 1e-5
+  lr: 1e-6 # our batch size is nowhere comparable to that of the Wav2Vec2 authors...
 
