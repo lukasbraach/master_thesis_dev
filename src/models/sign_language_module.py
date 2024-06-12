@@ -21,7 +21,7 @@ class SignLanguageLitModule(LightningModule):
             self,
             net: SignLanguageNet,
             optimizer: torch.optim.Optimizer,
-            warmup_step_interval: 150,
+            warmup_step_interval: int = 150,
     ) -> None:
         """Initialize a `SignLanguageLitModule`.
 
@@ -74,7 +74,6 @@ class SignLanguageLitModule(LightningModule):
 
             # adapt attention mask for VideoMAE tokenization
             attention_mask = attention_mask.repeat_interleave(expansion_factor, dim=1)
-
 
         outputs = self.net(
             input_values,

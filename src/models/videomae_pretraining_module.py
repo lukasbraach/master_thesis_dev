@@ -18,7 +18,7 @@ class VideoMAEPretrainingModule(LightningModule):
             self,
             net: CustomVideoMAEForPreTraining,
             optimizer: torch.optim.Optimizer,
-            warmup_step_interval=2500,
+            warmup_step_interval: int = 2500,
     ):
         super().__init__()
 

@@ -16,7 +16,7 @@ class SpatiotemporalPretrainingModule(LightningModule):
             self,
             net: SpatiotemporalEncoderForPreTraining,
             optimizer: torch.optim.Optimizer,
-            warmup_step_interval=2500,
+            warmup_step_interval: int = 2500,
     ):
         super().__init__()
 
