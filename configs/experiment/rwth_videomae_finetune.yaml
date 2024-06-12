@@ -1,0 +1,22 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=example
+
+defaults:
+  - rwth_from_scratch
+  - _self_
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+tags: ["sign_language", "rwth_phoenix", "spatiotemporal_finetune"]
+
+
+data:
+  batch_size: 8
+
+model:
+  net:
+    encoder:
+      _target_: transformers.models.videomae.modeling_videomae.VideoMAEModel.from_pretrained
+      pretrained_model_name_or_path: "/data/1braach/pretrained/videomae/"
