@@ -110,7 +110,7 @@ class SignLanguageDataModule(LightningDataModule):
                 padding=len(batch) > 1,
                 return_tensors='pt',
                 return_length=True,
-                return_attention_mask=False,
+                return_attention_mask=True,
             )
 
         # expecting pixel_values to be of shape (batch_size, num_frames, 3, 224, 224)
@@ -169,6 +169,7 @@ class SignLanguageDataModule(LightningDataModule):
             # addressing input_ids via dot notation instead of key lookup!!
             # using at most batch_size labels.
             result['labels'] = labels.input_ids[:batch_size]
+            result['label_attention_mask'] = labels.attention_mask[:batch_size]
 
         return result
 

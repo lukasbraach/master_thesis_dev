@@ -2,7 +2,7 @@ defaults:
   - _self_
   - net: decoder/language_decoder
 
-_target_: src.models.sign_language_pretraining.SignLanguagePretrainingLitModule
+_target_: src.models.langdecoder_pretraining_module.LangDecoderPretrainingModule
 
 optimizer:
   _target_: torch.optim.Adam
