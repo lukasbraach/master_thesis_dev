@@ -120,7 +120,7 @@ class SignLanguageDataModule(LightningDataModule):
         }
 
         # only process frames if present.
-        if self.hparams.dataset_frames_key is not None and batch[0][self.hparams.dataset_frames_key]:
+        if self.hparams.dataset_frames_key in batch[0]:
             # expecting pixel_values to be of shape (batch_size, num_frames, 3, 224, 224)
             pixel_values = [
                 # enforce max_frame_seq_length by truncating the frames

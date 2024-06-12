@@ -218,6 +218,9 @@ class LangDecoderPretrainingModule(LightningModule):
     def on_fit_end(self) -> None:
         pass
 
+    def get_pretrained_model(self):
+        return self.net
+
     def setup(self, stage: str) -> None:
         """Lightning hook that is called at the beginning of fit (train + validate), validate,
         test, or predict.

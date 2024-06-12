@@ -4,7 +4,7 @@
 # python train.py experiment=example
 
 defaults:
-  - override /data: rwth_phoenix_2014
+  - override /data: rwth_phoenix_2014_pre
   - override /model: sign_language_decoder_module
   - override /callbacks: default
   - override /trainer: gpu
