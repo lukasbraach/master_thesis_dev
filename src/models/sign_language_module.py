@@ -21,6 +21,7 @@ class SignLanguageLitModule(LightningModule):
             self,
             net: SignLanguageNet,
             optimizer: torch.optim.Optimizer,
+            warmup_step_interval: 150,
     ) -> None:
         """Initialize a `SignLanguageLitModule`.
 
@@ -50,6 +51,8 @@ class SignLanguageLitModule(LightningModule):
 
         # for tracking best so far validation accuracy
         self.val_wer_best = MinMetric()
+
+        self.warmup_step_interval = warmup_step_interval
 
     def forward(
             self,
@@ -289,7 +292,7 @@ class SignLanguageLitModule(LightningModule):
             "lr_scheduler": {
                 "scheduler": scheduler,
                 "interval": "step",
-                "frequency": 150,
+                "frequency": self.warmup_step_interval,
             },
         }
 

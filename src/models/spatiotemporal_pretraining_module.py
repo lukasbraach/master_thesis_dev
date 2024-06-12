@@ -15,7 +15,8 @@ class SpatiotemporalPretrainingModule(LightningModule):
     def __init__(
             self,
             net: SpatiotemporalEncoderForPreTraining,
-            optimizer: torch.optim.Optimizer
+            optimizer: torch.optim.Optimizer,
+            warmup_step_interval=2500,
     ):
         super().__init__()
 
@@ -24,6 +25,8 @@ class SpatiotemporalPretrainingModule(LightningModule):
         self.optimizer = optimizer
         self.train_loss = MeanMetric()
         self.val_loss = MeanMetric()
+
+        self.warmup_step_interval = warmup_step_interval
 
     def forward(self, pixel_values, attention_mask=None):
         model_response = self.net(
@@ -107,7 +110,7 @@ class SpatiotemporalPretrainingModule(LightningModule):
             "lr_scheduler": {
                 "scheduler": scheduler,
                 "interval": "step",
-                "frequency": 2500,
+                "frequency": self.warmup_step_interval,
             },
         }
 

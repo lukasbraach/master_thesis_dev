@@ -12,7 +12,11 @@ defaults:
 
 tags: ["sign_language", "rwth_phoenix", "pre_training"]
 
+data:
+  batch_size: 8
+
 model:
+  warmup_step_interval: 150
   net:
     wav2vec2:
       _target_: src.models.components.spatiotemporal_encoder.SpatiotemporalEncoder.from_pretrained

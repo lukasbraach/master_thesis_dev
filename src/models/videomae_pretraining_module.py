@@ -18,6 +18,7 @@ class VideoMAEPretrainingModule(LightningModule):
             self,
             net: CustomVideoMAEForPreTraining,
             optimizer: torch.optim.Optimizer,
+            warmup_step_interval=2500,
     ):
         super().__init__()
 
@@ -26,6 +27,8 @@ class VideoMAEPretrainingModule(LightningModule):
         self.optimizer = optimizer
         self.train_loss = MeanMetric()
         self.val_loss = MeanMetric()
+
+        self.warmup_step_interval = warmup_step_interval
 
     def forward(
             self,
@@ -87,7 +90,7 @@ class VideoMAEPretrainingModule(LightningModule):
             "lr_scheduler": {
                 "scheduler": scheduler,
                 "interval": "step",
-                "frequency": 2500,
+                "frequency": self.warmup_step_interval,
             },
         }
 
