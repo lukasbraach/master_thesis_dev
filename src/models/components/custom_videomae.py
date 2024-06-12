@@ -11,6 +11,8 @@ class CustomVideoMAEConfig(VideoMAEConfig):
 
 
 class CustomVideoMAEModel(VideoMAEModel):
+    config_class = CustomVideoMAEConfig
+
     def __init__(self, config: CustomVideoMAEConfig):
         super().__init__(config)
 
