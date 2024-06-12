@@ -43,6 +43,10 @@ def save(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         log.info("Saving model")
         model.get_pretrained_model().save_pretrained(cfg.get("save_path"))
 
+    if cfg.get("push_hf_hub"):
+        log.info("Pushing to HuggingFace Hub")
+        model.get_pretrained_model().push_to_hub(cfg.get("push_hf_hub"))
+
     return {}, {}
 
 
