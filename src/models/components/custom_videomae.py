@@ -9,7 +9,6 @@ class CustomVideoMAEConfig(VideoMAEConfig):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-
 class CustomVideoMAEModel(VideoMAEModel):
     config_class = CustomVideoMAEConfig
 
