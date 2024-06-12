@@ -37,7 +37,7 @@ def save(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
     if cfg.get("ckpt_path"):
         log.info("Restoring from checkpoint")
-        model = model.__class__.load_from_checkpoint(cfg.get("ckpt_path"), net=model.net)
+        model = model.__class__.load_from_checkpoint(cfg.get("ckpt_path"), net=model.net, optimizer=None)
 
     if cfg.get("save_path"):
         log.info("Saving model")
