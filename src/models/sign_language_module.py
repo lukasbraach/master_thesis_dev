@@ -285,7 +285,7 @@ class SignLanguageLitModule(LightningModule):
                 # keep lr constant for a while as Wav2Vec2 authors
                 return 1
             else:
-                return decay_rate ** (epoch - warmup_epochs)
+                return decay_rate ** (epoch - (warmup_epochs + hold_epochs))
 
         scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda)
 
