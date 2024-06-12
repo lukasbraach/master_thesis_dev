@@ -23,7 +23,7 @@ class SignLanguageNet(SpeechEncoderDecoderModel):
 
         config.num_beams = 5
 
-        super().__init__(config=config)
+        super().__init__(config=config, encoder=encoder, decoder=decoder)
 
 
 if __name__ == "__main__":
