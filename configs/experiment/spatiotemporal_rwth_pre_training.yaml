@@ -14,7 +14,11 @@ tags: ["sign_language", "rwth_phoenix", "pre_training"]
 
 data:
   batch_size: 8
-  num_workers: 16
+
+
+trainer:
+  min_epochs: 4
+  max_epochs: 20 # more does not seem to improve loss.
 
 model:
   warmup_step_interval: 150

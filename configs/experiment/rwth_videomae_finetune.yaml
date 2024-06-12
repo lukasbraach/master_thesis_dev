@@ -16,8 +16,10 @@ tags: ["sign_language", "rwth_phoenix", "spatiotemporal_finetune"]
 data:
   batch_size: 8
   max_frame_seq_length: 80
+  force_batch_size_exponential_of_2: True
 
 model:
+  warmup_steps_interval: 300
   net:
     encoder:
       _target_: src.models.components.custom_videomae.CustomVideoMAEModel.from_pretrained

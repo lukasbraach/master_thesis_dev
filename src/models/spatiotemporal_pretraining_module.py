@@ -97,7 +97,7 @@ class SpatiotemporalPretrainingModule(LightningModule):
         """
         optimizer = self.optimizer(params=self.trainer.model.parameters())
 
-        def lr_lambda(epoch, warmup_epochs=10, decay_rate=0.95):
+        def lr_lambda(epoch, warmup_epochs=10, decay_rate=0.9):
             if epoch < warmup_epochs:
                 return (epoch + 1) / warmup_epochs
             else:
