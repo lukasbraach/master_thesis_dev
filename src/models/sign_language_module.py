@@ -67,9 +67,11 @@ class SignLanguageLitModule(LightningModule):
         if isinstance(self.net.encoder, CustomVideoMAEModel):
             videomae_seq_len = self._get_videomae_seq_length_for(input_values)
             attention_seq_len = attention_mask.shape[1]
+            expansion_factor = videomae_seq_len // attention_seq_len
 
-            attention_mask = attention_mask.repeat_interleave(videomae_seq_len // attention_seq_len)
-            
+            # adapt attention mask for VideoMAE tokenization
+            attention_mask = attention_mask.repeat_interleave(expansion_factor, dim=1)
+
 
         outputs = self.net(
             input_values,
