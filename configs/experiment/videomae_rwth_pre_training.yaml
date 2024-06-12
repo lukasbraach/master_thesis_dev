@@ -2,23 +2,27 @@
 
 # to execute this experiment run:
 # python train.py experiment=example
-
 defaults:
-  - spatiotemporal_pre_training
+  - videomae_pre_training
   - override /data: rwth_phoenix_2014
 
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
 
-tags: ["sign_language", "rwth_phoenix", "pre_training"]
+tags: ["videomae", "rwth_phoenix", "pre_training"]
+
+
+seed: 12345
 
 data:
   batch_size: 8
   num_workers: 16
+  max_frame_seq_length: 80
+  force_batch_size_exponential_of_2: True
 
 model:
   warmup_step_interval: 150
   net:
-    wav2vec2:
-      _target_: src.models.components.spatiotemporal_encoder.SpatiotemporalEncoder.from_pretrained
-      pretrained_model_name_or_path: "/data/1braach/pretrained/spatiotemporal/"
+    videomae:
+      _target_: src.models.components.custom_videomae.CustomVideoMAEModel.from_pretrained
+      pretrained_model_name_or_path: "/data/1braach/pretrained/videomae/"

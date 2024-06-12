@@ -10,7 +10,10 @@ from transformers.utils.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT
 
 
 class CustomVideoMAEForPreTraining(VideoMAEPreTrainedModel):
-    def __init__(self, config: VideoMAEConfig):
+    def __init__(self,
+                 config: VideoMAEConfig,
+                 videomae: VideoMAEModel= None, # for initializing with custom videomae
+                 ):
         super().__init__(config)
         self.config = config
 
@@ -26,6 +29,11 @@ class CustomVideoMAEForPreTraining(VideoMAEPreTrainedModel):
 
         # Initialize weights and apply final processing
         self.post_init()
+
+        if videomae:
+            # overwrite after post_init() hook...
+            self.videomae = videomae
+            print("Initialized CustomVideoMAEForPreTraining with given model.")
 
     def forward(
             self,
