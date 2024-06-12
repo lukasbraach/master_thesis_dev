@@ -14,6 +14,7 @@ tags: ["sign_language", "rwth_phoenix", "spatiotemporal_finetune"]
 
 data:
   batch_size: 8
+  max_frame_seq_length: 80
 
 model:
   net:
