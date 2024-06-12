@@ -12,7 +12,7 @@ defaults:
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
 
-tags: ["sign_language", "bundestag_slr", "pre_training"]
+tags: [ "sign_language", "bundestag_slr", "pre_training" ]
 
 seed: 12345
 
@@ -30,21 +30,20 @@ trainer:
 data:
   batch_size: 16
 
+paths:
+  log_dir: /data/1braach/logs/
+
 logger:
   wandb:
     tags: ${tags}
     group: "sign_language"
-
-paths:
-  log_dir: /data/1braach/logs/
-
 
 callbacks:
   model_checkpoint:
     dirpath: ${paths.output_dir}/checkpoints
     filename: "spatiotemporal_{epoch:03d}_{step:07d}"
     mode: "min"
-    save_top_k: -1
+    save_top_k: 5
     save_last: True
     auto_insert_metric_name: True
     train_time_interval:

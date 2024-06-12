@@ -42,7 +42,7 @@ callbacks:
     dirpath: ${paths.output_dir}/checkpoints
     filename: "videomae_{epoch:03d}_{step:07d}"
     mode: "min"
-    save_top_k: -1
+    save_top_k: 5
     save_last: True
     auto_insert_metric_name: True
     train_time_interval:
