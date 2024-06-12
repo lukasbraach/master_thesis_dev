@@ -16,7 +16,7 @@ data:
   batch_size: 8
 
 model:
-  warmup_steps_interval: 300
+  warmup_step_interval: 300
   net:
     encoder:
       _target_: src.models.components.spatiotemporal_encoder.SpatiotemporalEncoder.from_pretrained
