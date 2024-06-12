@@ -5,8 +5,13 @@ from transformers import VideoMAEModel, AutoModel, VideoMAEConfig
 from transformers.modeling_outputs import BaseModelOutput
 
 
+class CustomVideoMAEConfig(VideoMAEConfig):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+
 class CustomVideoMAEModel(VideoMAEModel):
-    def __init__(self, config: VideoMAEConfig):
+    def __init__(self, config: CustomVideoMAEConfig):
         super().__init__(config)
 
     def forward(
@@ -37,4 +42,4 @@ class CustomVideoMAEModel(VideoMAEModel):
         return attention_mask
 
 
-AutoModel.register(VideoMAEConfig, CustomVideoMAEModel)
+AutoModel.register(CustomVideoMAEConfig, CustomVideoMAEModel)
