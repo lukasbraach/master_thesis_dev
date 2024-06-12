@@ -8,6 +8,7 @@ from torchmetrics import MeanMetric, MinMetric
 from torchmetrics.text import WordErrorRate
 from transformers.modeling_outputs import Seq2SeqLMOutput
 
+from src.models.components.custom_videomae import CustomVideoMAEModel
 from src.models.components.sign_language_net import SignLanguageNet
 
 # Faster training on Ampere cards...
@@ -63,6 +64,13 @@ class SignLanguageLitModule(LightningModule):
         :param input_values: A tensor of images.
         :return: A tensor of logits.
         """
+        if isinstance(self.net.encoder, CustomVideoMAEModel):
+            videomae_seq_len = self._get_videomae_seq_length_for(input_values)
+            attention_seq_len = attention_mask.shape[1]
+
+            attention_mask = attention_mask.repeat_interleave(videomae_seq_len // attention_seq_len)
+            
+
         outputs = self.net(
             input_values,
             attention_mask=attention_mask,
@@ -228,6 +236,17 @@ class SignLanguageLitModule(LightningModule):
             since this is NOT called on every device
         """
         pass
+
+    def _get_videomae_seq_length_for(self, pixel_values: torch.Tensor) -> int:
+        if not isinstance(self.net.encoder, CustomVideoMAEModel):
+            raise Exception("self.net.encoder must be a CustomVideoMAEModel!")
+
+        batch_size, num_frames, channels, height, width = pixel_values.shape
+
+        num_patches_per_frame = (height // self.net.encoder.config.patch_size) ** 2
+        seq_length = (num_frames // self.net.encoder.config.tubelet_size) * num_patches_per_frame
+
+        return seq_length
 
     def on_fit_end(self) -> None:
         pass
