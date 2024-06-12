@@ -20,7 +20,7 @@ model:
   net:
     encoder:
       _target_: src.models.components.spatiotemporal_encoder.SpatiotemporalEncoder.from_pretrained
-      pretrained_model_name_or_path: "lukasbraach/spatiotemporal_bundestag_pretrain"
+      pretrained_model_name_or_path: "lukasbraach/spatiotemporal_rwth_pretrain"
 
     decoder:
       _target_: src.models.components.language_decoder.LanguageDecoder.from_pretrained
