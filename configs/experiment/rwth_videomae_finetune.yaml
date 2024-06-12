@@ -22,4 +22,4 @@ model:
       _target_: src.models.components.custom_videomae.CustomVideoMAEModel.from_pretrained
       pretrained_model_name_or_path: "/data/1braach/pretrained/videomae/"
       config:
-        _target_: transformers.VideoMAEConfig
+        _target_: src.models.components.custom_videomae.CustomVideoMAEConfig
