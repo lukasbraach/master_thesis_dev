@@ -35,6 +35,10 @@ logger:
     tags: ${tags}
     group: "sign_language"
 
+paths:
+  log_dir: /data/1braach/logs/
+
+
 callbacks:
   model_checkpoint:
     dirpath: ${paths.output_dir}/checkpoints

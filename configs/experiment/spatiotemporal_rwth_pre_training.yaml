@@ -1,0 +1,19 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=example
+
+defaults:
+  - spatiotemporal_pre_training
+  - override /data: rwth_phoenix_2014
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+tags: ["sign_language", "rwth_phoenix", "pre_training"]
+
+model:
+  net:
+    wav2vec2:
+      _target_: src.models.components.spatiotemporal_encoder.SpatiotemporalEncoder.from_pretrained
+      pretrained_model_name_or_path: "/data/1braach/pretrained/spatiotemporal/"

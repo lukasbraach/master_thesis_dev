@@ -120,11 +120,18 @@ class SpatiotemporalEncoderForPreTraining(Wav2Vec2ForPreTraining):
     main_input_name = "input_values"
     supports_gradient_checkpointing = True
 
-    def __init__(self, config: SpatiotemporalEncoderConfig):
+    def __init__(
+            self,
+            config: SpatiotemporalEncoderConfig,
+            wav2vec2: SpatiotemporalEncoder = None, # load pre-trained model
+    ):
         super().__init__(config)
 
         # we have to overwrite these parts for our purposes
-        self.wav2vec2 = SpatiotemporalEncoder(config)
+        self.wav2vec2 = wav2vec2 or SpatiotemporalEncoder(config)
+
+        if wav2vec2 is not None:
+            print("Initialized SpatiotemporalEncoderForPreTraining with given Wav2Vec2 model.")
 
         # Weights are already initialized in the Wav2Vec2Model
         # self.post_init()

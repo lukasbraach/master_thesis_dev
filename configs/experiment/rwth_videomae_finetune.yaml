@@ -25,3 +25,7 @@ model:
       config:
         _target_: src.models.components.custom_videomae.CustomVideoMAEConfig.from_pretrained
         pretrained_model_name_or_path: "/data/1braach/pretrained/videomae/"
+
+    decoder:
+      _target_: src.models.components.language_decoder.LanguageDecoder.from_pretrained
+      pretrained_model_name_or_path: "/data/1braach/pretrained/langdecoder/"
