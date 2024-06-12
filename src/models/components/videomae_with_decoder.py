@@ -12,7 +12,7 @@ from transformers.utils.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT
 class CustomVideoMAEForPreTraining(VideoMAEPreTrainedModel):
     def __init__(self,
                  config: VideoMAEConfig,
-                 videomae: VideoMAEModel= None, # for initializing with custom videomae
+                 videomae: VideoMAEModel = None  # for initializing with custom videomae
                  ):
         super().__init__(config)
         self.config = config
