@@ -12,6 +12,7 @@ from transformers import BitImageProcessor, PreTrainedTokenizer, PreTrainedToken
 # disable parallelism in tokenizers
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
+
 def next_lower_power_of_2(n):
     if n < 1:
         raise ValueError("Input must be a positive integer")
@@ -113,57 +114,59 @@ class SignLanguageDataModule(LightningDataModule):
                 return_attention_mask=True,
             )
 
-        # expecting pixel_values to be of shape (batch_size, num_frames, 3, 224, 224)
-        pixel_values = [
-            # enforce max_frame_seq_length by truncating the frames
-            # and only return every nth element
-            np.asarray(
-                video[self.hparams.dataset_frames_key]
-                if len(video[self.hparams.dataset_frames_key]) <= self.hparams.max_frame_seq_length
-                else video[self.hparams.dataset_frames_key][:self.hparams.max_frame_seq_length],
-                dtype=np.float32)
-            [::self.hparams.return_every_nth_element]
-
-            for video in batch
-        ]
-        video_lengths = torch.IntTensor(torch.tensor([video.shape[0] for video in pixel_values], dtype=torch.int))
-
-        pixel_values = [
-            self._image_processor(images=video, return_tensors='np')['pixel_values']
-            for video in pixel_values
-        ]
-
-        batch_size = len(pixel_values)
-
-        if self.hparams.force_batch_size_exponential_of_2:
-            # Ensure that the batch size is always in 2^n
-            # as this is some weird batching restriction of VideoMAE
-            batch_size = next_lower_power_of_2(len(pixel_values))
-
-        # Create a padded array of zeros
-        # and the original pixel_values into the padded array
-        channels, height, width = pixel_values[0][0].shape
-        padded_pixel_values = np.zeros(
-            (batch_size, self.hparams.max_frame_seq_length, channels, height, width))
-        attention_mask = torch.zeros((batch_size, self.hparams.max_frame_seq_length), dtype=torch.bool)
-
-        for i, video in enumerate(pixel_values):
-            if i >= batch_size:
-                # don't copy more than we have allocated
-                break
-
-            attention_mask[i, :len(video)] = 1
-            padded_pixel_values[i, :len(video)] = video
-
-        # Convert to tensor
-        padded_pixel_values = torch.tensor(padded_pixel_values, dtype=torch.float32)
-
+        batch_size = len(batch)
         result = {
-            'pixel_values': padded_pixel_values,
-            'video_lengths': video_lengths,
-            'attention_mask': attention_mask,
             'ids': [ex['id'] for ex in batch],
         }
+
+        # only process frames if present.
+        if self.hparams.dataset_frames_key is not None and batch[0][self.hparams.dataset_frames_key]:
+            # expecting pixel_values to be of shape (batch_size, num_frames, 3, 224, 224)
+            pixel_values = [
+                # enforce max_frame_seq_length by truncating the frames
+                # and only return every nth element
+                np.asarray(
+                    video[self.hparams.dataset_frames_key]
+                    if len(video[self.hparams.dataset_frames_key]) <= self.hparams.max_frame_seq_length
+                    else video[self.hparams.dataset_frames_key][:self.hparams.max_frame_seq_length],
+                    dtype=np.float32)
+                [::self.hparams.return_every_nth_element]
+
+                for video in batch
+            ]
+            video_lengths = torch.IntTensor(torch.tensor([video.shape[0] for video in pixel_values], dtype=torch.int))
+
+            pixel_values = [
+                self._image_processor(images=video, return_tensors='np')['pixel_values']
+                for video in pixel_values
+            ]
+
+            if self.hparams.force_batch_size_exponential_of_2:
+                # Ensure that the batch size is always in 2^n
+                # as this is some weird batching restriction of VideoMAE
+                batch_size = next_lower_power_of_2(len(pixel_values))
+
+            # Create a padded array of zeros
+            # and the original pixel_values into the padded array
+            channels, height, width = pixel_values[0][0].shape
+            padded_pixel_values = np.zeros(
+                (batch_size, self.hparams.max_frame_seq_length, channels, height, width))
+            attention_mask = torch.zeros((batch_size, self.hparams.max_frame_seq_length), dtype=torch.bool)
+
+            for i, video in enumerate(pixel_values):
+                if i >= batch_size:
+                    # don't copy more than we have allocated
+                    break
+
+                attention_mask[i, :len(video)] = 1
+                padded_pixel_values[i, :len(video)] = video
+
+            # Convert to tensor
+            padded_pixel_values = torch.tensor(padded_pixel_values, dtype=torch.float32)
+
+            result['pixel_values'] = padded_pixel_values
+            result['video_lengths'] = video_lengths
+            result['attention_mask'] = attention_mask
 
         if labels is not None:
             # addressing input_ids via dot notation instead of key lookup!!

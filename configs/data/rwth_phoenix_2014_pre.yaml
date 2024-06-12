@@ -1,9 +1,13 @@
-_target_: src.data.rwth_phoenix_2014_datamodule.RWTHPhoenix2014DataModule
+_target_: src.data.sign_language_datamodule.SignLanguageDataModule
 
-batch_size: 16 # Needs to be divisible by the number of devices (e.g., if in a distributed setup)
-num_workers: 1
-pin_memory: False
-variant: pre-training
+batch_size: ${trainer.devices} # Needs to be divisible by the number of devices (e.g., if in a distributed setup)
+dataset_source: "/data/1braach/rwth_phoenix_weather_2014"
+dataset_variant: "pre-training"
+num_workers: 12
+pin_memory: True
+
+dataset_frames_key: None
+dataset_transcription_key: transcription
 
 tokenizer:
   _target_: transformers.PreTrainedTokenizerFast
