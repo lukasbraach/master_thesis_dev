@@ -20,4 +20,5 @@ model:
     encoder:
       _target_: transformers.models.videomae.modeling_videomae.VideoMAEModel.from_pretrained
       pretrained_model_name_or_path: "/data/1braach/pretrained/videomae/"
-      config: None
+      config:
+        _target_: transformers.VideoMAEConfig
