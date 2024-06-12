@@ -8,6 +8,7 @@ pin_memory: True
 
 dataset_frames_key: None
 dataset_transcription_key: transcription
+force_batch_size_exponential_of_2: false
 
 tokenizer:
   _target_: transformers.PreTrainedTokenizerFast

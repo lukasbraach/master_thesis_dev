@@ -18,7 +18,7 @@ seed: 12345
 
 trainer:
   min_epochs: 10
-  max_epochs: 40
+  max_epochs: 30
   precision: 16-mixed
 
   gradient_clip_val: 0.5
@@ -27,7 +27,7 @@ trainer:
   devices: 1
 
 data:
-  batch_size: 32
+  batch_size: 64
   max_frame_seq_length: 1
 
 paths:
@@ -45,7 +45,7 @@ callbacks:
     filename: "epoch_{epoch:03d}_step_{global_step:06d}"
     monitor: "val/loss"
     mode: "min"
-    save_top_k: -1
+    save_top_k: 1
     save_last: True
     every_n_epochs: 1
     auto_insert_metric_name: True
