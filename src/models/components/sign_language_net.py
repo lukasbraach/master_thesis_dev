@@ -1,9 +1,10 @@
 from typing import Union
 
 from transformers import SpeechEncoderDecoderModel, SpeechEncoderDecoderConfig, \
-    PreTrainedTokenizerFast, PreTrainedTokenizer, PreTrainedModel
+    PreTrainedTokenizerFast, PreTrainedTokenizer, PreTrainedModel, AutoConfig, AutoModel
 
 from src.models.components.language_decoder import LanguageDecoder
+from src.models.components.spatiotemporal_encoder import SpatiotemporalEncoder, SpatiotemporalEncoderConfig
 
 
 class SignLanguageNet(SpeechEncoderDecoderModel):
@@ -30,3 +31,7 @@ class SignLanguageNet(SpeechEncoderDecoderModel):
 
 if __name__ == "__main__":
     _ = SignLanguageNet()
+
+
+AutoConfig.register("spatiotemporal-encoder", SpatiotemporalEncoderConfig)
+AutoModel.register(SpatiotemporalEncoderConfig, SpatiotemporalEncoder)
