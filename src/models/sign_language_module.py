@@ -117,6 +117,9 @@ class SignLanguageLitModule(LightningModule):
 
         return output.loss, preds_decoded, truth_decoded
 
+    def get_pretrained_model(self):
+        return self.net
+
     def training_step(
             self, batch: dict, batch_idx: int
     ) -> torch.Tensor:
