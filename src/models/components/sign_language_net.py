@@ -12,16 +12,18 @@ class SignLanguageNet(SpeechEncoderDecoderModel):
 
     def __init__(
             self,
-            encoder: PreTrainedModel,
-            decoder: LanguageDecoder,
-            tokenizer: Union[PreTrainedTokenizer, PreTrainedTokenizerFast],
+            config: SpeechEncoderDecoderConfig = None,
+            encoder: PreTrainedModel = None,
+            decoder: LanguageDecoder = None,
+            tokenizer: Union[PreTrainedTokenizer, PreTrainedTokenizerFast] = None,
     ) -> None:
-        self.tokenizer = tokenizer
+        if config is None and tokenizer is not None:
+            self.tokenizer = tokenizer
 
-        config = SpeechEncoderDecoderConfig.from_encoder_decoder_configs(encoder.config, decoder.config)
-        config.update(decoder.config.to_diff_dict())
+            config = SpeechEncoderDecoderConfig.from_encoder_decoder_configs(encoder.config, decoder.config)
+            config.update(decoder.config.to_diff_dict())
 
-        config.num_beams = 5
+            config.num_beams = 5
 
         super().__init__(config=config, encoder=encoder, decoder=decoder)
 
