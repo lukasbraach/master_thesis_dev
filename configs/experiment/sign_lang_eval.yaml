@@ -13,6 +13,7 @@ data:
 paths:
   log_dir: /data/1braach/logs/
 
+ckpt_path: None
 
 model:
   net:
