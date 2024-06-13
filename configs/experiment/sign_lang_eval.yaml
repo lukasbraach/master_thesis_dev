@@ -17,5 +17,5 @@ ckpt_path: None
 
 model:
   net:
-    _target_: src.models.components.sign_language_net.SignLanguageNet
+    _target_: src.models.components.sign_language_net.SignLanguageNet.from_pretrained
     pretrained_model_name_or_path: "lukasbraach/spatiotemporal_rwth_signlang"
